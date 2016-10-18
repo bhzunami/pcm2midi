@@ -69,7 +69,9 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
 			for (int i = 0; i < pitch.length; i++){
 				pitch[i] = list.get(i).y;
 			}
-			System.out.println(Arrays.toString(pitch));
+			if(pitch.length > 0){
+				System.out.println(pitch[0]);
+			}
 		}
 
 	}
