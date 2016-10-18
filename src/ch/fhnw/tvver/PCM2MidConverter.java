@@ -3,7 +3,6 @@ package ch.fhnw.tvver;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -35,6 +34,8 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
 
 	@Override
 	protected void initializePipeline(RenderProgram<IAudioRenderTarget> program) {
+		// Window defines the windowing function in order to have a continuous signal if the sample 
+		// gets repeated multiple times before and after.
 		FFT fft = new FFT(A_SUB_CONTRA_OCTAVE_FREQ, Window.HANN);
 		program.addLast(new DCRemove());
 		program.addLast(new AutoGain());
