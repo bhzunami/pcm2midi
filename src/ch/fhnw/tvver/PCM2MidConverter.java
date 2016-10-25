@@ -23,6 +23,7 @@ import ch.fhnw.ether.audio.fx.DCRemove;
 import ch.fhnw.ether.media.AbstractRenderCommand;
 import ch.fhnw.ether.media.RenderCommandException;
 import ch.fhnw.ether.media.RenderProgram;
+import ch.fhnw.tvver.workshop.Distort;
 import ch.fhnw.util.math.Vec2;
 
 public class PCM2MidConverter extends AbstractPCM2MIDI {    
@@ -39,9 +40,12 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
 		// Window defines the windowing function in order to have a continuous signal if the sample 
 		// gets repeated multiple times before and after.
 		FFT fft = new FFT(A_SUB_CONTRA_OCTAVE_FREQ, Window.HANN);
+		
+		//program.addLast(new Distort());
 		program.addLast(new DCRemove());
 		program.addLast(new AutoGain());
 		program.addLast(fft);
+		
 		program.addLast(new Converter(fft));
 		new JFrame().setVisible(true);
 	}
@@ -49,6 +53,7 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
 	private class Converter extends AbstractRenderCommand<IAudioRenderTarget> {
 		
 		private FFT fft;
+		private float max = 0f;
 		
 		public Converter(FFT fft){
 			this.fft = fft;
@@ -62,12 +67,28 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
 		@Override
 		protected void run(IAudioRenderTarget target) throws RenderCommandException {
 		    
-			float[] transformed = this.fft.power().clone();
+			float[] transformed = this.fft.power().clone();			
+			float max = 0f;
 			
-			System.out.println("Next round:");
 			for(int i = 0; i < transformed.length; i++ ) {
-			    System.out.println(transformed[i]);
+			    if(transformed[i] > max) {
+			        max = transformed[i];
+			    }
 			}
+			
+			if(this.max != max) {
+			    this.max = max;
+			    double tone = 69 + (Math.log(12) / Math.log(2)) * (this.max/440);
+	            System.out.println("Tone:  "+ tone);
+			}
+			
+			
+			
+			
+			
+			
+			
+			
 			
 //			AudioUtilities.multiplyHarmonics(transformed, 2);
 //			final BitSet peaks = AudioUtilities.peaks(transformed, 3, 0.2f);
