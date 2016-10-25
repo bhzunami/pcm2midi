@@ -12,11 +12,13 @@ import java.util.List;
 import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.MidiUnavailableException;
 import javax.sound.sampled.UnsupportedAudioFileException;
+import javax.swing.JFrame;
 
 import ch.fhnw.ether.audio.AudioUtilities;
 import ch.fhnw.ether.audio.AudioUtilities.Window;
-import ch.fhnw.ether.audio.FFT;
+import ch.fhnw.ether.audio.fx.FFT;
 import ch.fhnw.ether.audio.IAudioRenderTarget;
+import ch.fhnw.ether.audio.URLAudioSource;
 import ch.fhnw.ether.audio.fx.AutoGain;
 import ch.fhnw.ether.audio.fx.DCRemove;
 import ch.fhnw.ether.media.AbstractRenderCommand;
@@ -24,7 +26,7 @@ import ch.fhnw.ether.media.RenderCommandException;
 import ch.fhnw.ether.media.RenderProgram;
 import ch.fhnw.util.math.Vec2;
 
-public class PCM2MidConverter extends AbstractPCM2MIDI {
+public class PCM2MidConverter extends AbstractPCM2MIDI {    
 	
 	private static final float A_SUB_CONTRA_OCTAVE_FREQ = 25.5f;
 
@@ -40,6 +42,7 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
 		program.addLast(new AutoGain());
 		program.addLast(fft);
 		program.addLast(new Converter(fft));
+		new JFrame().setVisible(true);
 	}
 
 	private class Converter extends AbstractRenderCommand<IAudioRenderTarget> {
@@ -57,21 +60,28 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
 
 		@Override
 		protected void run(IAudioRenderTarget target) throws RenderCommandException {
+		    
 			float[] transformed = this.fft.power().clone();
-			AudioUtilities.multiplyHarmonics(transformed, 2);
-			final BitSet peaks = AudioUtilities.peaks(transformed, 3, 0.2f);
-			List<Vec2> list = new ArrayList<>();
-			for (int i = peaks.nextSetBit(0); i >= 0; i = peaks.nextSetBit(i + 1)){
-				list.add(new Vec2(transformed[i], fft.idx2f(i)));
+			
+			System.out.println("Next round:");
+			for(int i = 0; i < transformed.length; i++ ) {
+			    System.out.println(transformed[i]);
 			}
-			Collections.sort(list, (v0, v1) -> Float.compare(v0.x, v1.x));
-			float[] pitch = new float[list.size()];
-			for (int i = 0; i < pitch.length; i++){
-				pitch[i] = list.get(i).y;
-			}
-			if(pitch.length > 0){
-				System.out.println(pitch[0]);
-			}
+			
+//			AudioUtilities.multiplyHarmonics(transformed, 2);
+//			final BitSet peaks = AudioUtilities.peaks(transformed, 3, 0.2f);
+//			List<Vec2> list = new ArrayList<>();
+//			for (int i = peaks.nextSetBit(0); i >= 0; i = peaks.nextSetBit(i + 1)){
+//				list.add(new Vec2(transformed[i], fft.idx2f(i)));
+//			}
+//			Collections.sort(list, (v0, v1) -> Float.compare(v0.x, v1.x));
+//			float[] pitch = new float[list.size()];
+//			for (int i = 0; i < pitch.length; i++){
+//				pitch[i] = list.get(i).y;
+//			}
+//			if(pitch.length > 0){
+//				System.out.println(pitch[0]);
+//			}
 		}
 
 	}
