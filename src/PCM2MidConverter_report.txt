@@ -1,2 +1,0 @@
-File	Track length	# of reference notes	# of true detected notes	# of false detected notes	Min. Latency	Max. Latency	Avg. Latency	Grade
-scale.mid	0.0	80	0	0	100	100	0	1.0	
