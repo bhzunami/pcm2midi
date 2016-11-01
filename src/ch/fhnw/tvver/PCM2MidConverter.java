@@ -23,6 +23,7 @@ import ch.fhnw.ether.media.AbstractRenderCommand;
 import ch.fhnw.ether.media.RenderCommandException;
 import ch.fhnw.ether.media.RenderProgram;
 import ch.fhnw.util.math.Vec2;
+import javafx.application.Application;
 
 public class PCM2MidConverter extends AbstractPCM2MIDI {
     
@@ -44,15 +45,15 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
         // gets repeated multiple times before and after.
         FFT fft = new FFT(A_SUB_CONTRA_OCTAVE_FREQ, Window.HANN);
         BlockBuffer blockBuffer = new BlockBuffer(1024, true, Window.HANN);
-        Plot plot = new Plot("Tone detection", 400, 300);
-
-
+        Plotter plotter = new Plotter("Tone detection", 1000, 1000);
+        plotter.plot();
+        
         // program.addLast(new Distort());
         program.addLast(new DCRemove());
         program.addLast(new AutoGain());
         program.addLast(fft);
 
-        program.addLast(new Converter(fft, blockBuffer, plot));
+        program.addLast(new Converter(fft, blockBuffer, plotter));
         //new JFrame().setVisible(true);
     }
 
@@ -60,7 +61,7 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
 
         private FFT fft;
         private BlockBuffer blockBuffer;
-        private Plot plot;
+        private Plotter plot;
         int idx = 0;
         private float max = 0f;
 
@@ -70,7 +71,7 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
         
         
 
-        public Converter(FFT fft, BlockBuffer blockBuffer, Plot plot) {
+        public Converter(FFT fft, BlockBuffer blockBuffer, Plotter plot) {
             this.fft = fft;
             this.blockBuffer = blockBuffer;
             this.plot = plot;
