@@ -3,21 +3,14 @@ package ch.fhnw.tvver;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.BitSet;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.concurrent.SynchronousQueue;
 
 import javax.sound.midi.InvalidMidiDataException;
-import javax.sound.midi.MidiSystem;
 import javax.sound.midi.MidiUnavailableException;
-import javax.sound.midi.Sequence;
 import javax.sound.sampled.UnsupportedAudioFileException;
 import javax.swing.JFrame;
 
-import ch.fhnw.ether.audio.AudioUtilities;
 import ch.fhnw.ether.audio.AudioUtilities.Window;
 import ch.fhnw.ether.audio.IAudioRenderTarget;
 import ch.fhnw.ether.audio.fx.AutoGain;
@@ -26,7 +19,6 @@ import ch.fhnw.ether.audio.fx.FFT;
 import ch.fhnw.ether.media.AbstractRenderCommand;
 import ch.fhnw.ether.media.RenderCommandException;
 import ch.fhnw.ether.media.RenderProgram;
-import ch.fhnw.util.math.Vec2;
 
 public class PCM2MidConverter extends AbstractPCM2MIDI {
 
