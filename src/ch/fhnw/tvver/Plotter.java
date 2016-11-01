@@ -54,7 +54,7 @@ public class Plotter {
 
 	}
 
-	public void update(float[] data) {
+	public void update(Float[] data) {
 		double[] convertedData = new double[data.length];
 		for (int index = 0; index < data.length; index++) {
 			convertedData[index] = data[index];
@@ -66,8 +66,18 @@ public class Plotter {
 				frequencyChart.getAxisSet().adjustRange();
 			}
 		});
-		
-		
+	}
+	
+	public void update(float data) {
+	    double[] cdata = new double[1];
+	    cdata[0] = data;
+	    ILineSeries lineSeries = (ILineSeries) frequencyChart.getSeriesSet().getSeries("frequency");
+        Display.getDefault().asyncExec(() -> {
+            if(!shell.isDisposed()){
+                lineSeries.setYSeries(cdata);
+                frequencyChart.getAxisSet().adjustRange();
+            }
+        });
 	}
 
 }

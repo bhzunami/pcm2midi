@@ -2,9 +2,8 @@ package ch.fhnw.tvver;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
-import java.util.BitSet;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 
@@ -12,7 +11,6 @@ import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.MidiUnavailableException;
 import javax.sound.sampled.UnsupportedAudioFileException;
 
-import ch.fhnw.ether.audio.AudioUtilities;
 import ch.fhnw.ether.audio.AudioUtilities.Window;
 import ch.fhnw.ether.audio.BlockBuffer;
 import ch.fhnw.ether.audio.IAudioRenderTarget;
@@ -22,21 +20,17 @@ import ch.fhnw.ether.audio.fx.FFT;
 import ch.fhnw.ether.media.AbstractRenderCommand;
 import ch.fhnw.ether.media.RenderCommandException;
 import ch.fhnw.ether.media.RenderProgram;
-import ch.fhnw.util.math.Vec2;
-import javafx.application.Application;
 
 public class PCM2MidConverter extends AbstractPCM2MIDI {
-    
-    
+    // Attack herunter schrauben
+    // suspend a decand 2 s
+    // attack 0.015
 
     private static final float A_SUB_CONTRA_OCTAVE_FREQ = 25.5f;
 
     public PCM2MidConverter(File track) throws UnsupportedAudioFileException, IOException, MidiUnavailableException,
             InvalidMidiDataException, RenderCommandException {
         super(track, EnumSet.of(Flags.REPORT, Flags.WAVE));
-        
-        System.out.println("File " +track);
-
     }
 
     @Override
@@ -46,30 +40,40 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
         FFT fft = new FFT(A_SUB_CONTRA_OCTAVE_FREQ, Window.HANN);
         BlockBuffer blockBuffer = new BlockBuffer(1024, true, Window.HANN);
         Plotter plotter = new Plotter("Tone detection", 1000, 1000);
-        plotter.plot();
-        
+        // plotter.plot();
+
         // program.addLast(new Distort());
         program.addLast(new DCRemove());
         program.addLast(new AutoGain());
         program.addLast(fft);
 
         program.addLast(new Converter(fft, blockBuffer, plotter));
-        //new JFrame().setVisible(true);
+        // program.addLast(new Converter(fft, blockBuffer));
+        // new JFrame().setVisible(true);
     }
 
     private class Converter extends AbstractRenderCommand<IAudioRenderTarget> {
 
         private FFT fft;
+        private float[] samples = new float[1024];
         private BlockBuffer blockBuffer;
         private Plotter plot;
         int idx = 0;
+        int buffer = 0;
         private float max = 0f;
 
-        private float[] spectrum = new float[1024 / 2 + 1];
-        private float[] last_spectrum = new float[1024 / 2 + 1];
-        List<Float> spectralFlux = new ArrayList<Float>( );
-        
-        
+        private float[] spectrum = new float[1024 / 2];
+        private float[] last_spectrum = new float[1024 / 2];
+        List<Float> spectralFlux = new ArrayList<Float>();
+
+        int tone = 0;
+
+        List<Float> threshold = new ArrayList<>();
+
+        public Converter(FFT fft, BlockBuffer blockBuffer) {
+            this.fft = fft;
+            this.blockBuffer = blockBuffer;
+        }
 
         public Converter(FFT fft, BlockBuffer blockBuffer, Plotter plot) {
             this.fft = fft;
@@ -80,112 +84,70 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
         @Override
         protected void init(IAudioRenderTarget target) throws RenderCommandException {
             // do nothing
-           
+
         }
 
         @Override
         protected void run(IAudioRenderTarget target) throws RenderCommandException {
-            this.idx += 1;
+            this.buffer += 1;
+            if (this.buffer % 9 != 0) {
+                int index = ((this.buffer % 9) - 1) * 128;
 
-            float[] samples = this.fft.power().clone();
-            blockBuffer.add(samples);
-            
-            float[] new_spectrum = blockBuffer.nextBlock();
-            if(new_spectrum == null) {
-                System.out.println("Block buffer is empty");
+                for (int i = 0; i < target.getFrame().samples.length; i++) {
+                    this.samples[index + i] = target.getFrame().samples[i];
+                }
                 return;
             }
-            
-            plot.update(new_spectrum);
-            
-            //float[] samples = new float[target.getFrame().samples.length];
-            
-            float frequ_calc = (target.getFrame().sRate / 2) / (blockBuffer.size() / 2) / 2; //22050 / 513 / 2
-
+            this.idx += 1;
+            float frequ_calc = (target.getFrame().sRate / 2) / (blockBuffer.size() / 2) / 2; // 22050
+                                                                                             // /
+                                                                                             // 513
+                                                                                             // / 2
+            // Copy spectrum to last_spectrum
             System.arraycopy(spectrum, 0, last_spectrum, 0, spectrum.length);
-            System.arraycopy(new_spectrum, 0, spectrum, 0, spectrum.length);
- 
+
+            // Set new spectrum
+            System.arraycopy(fft.power().clone(), 0, spectrum, 0, spectrum.length);
+
+            float flux = calculateFlux();
+            spectralFlux.add(flux);
+
+            // Now we have to decide if this amplitude is enough high as a
+            // new tone.
+            float mean = calcualteTreshhold(Math.max(0, this.idx - 50), Math.min(spectralFlux.size() - 1, this.idx + 50));
+            threshold.add(mean);
+
+            if (flux > mean) {
+                System.out.println("");
+                System.out.println("TONE! Mean: " + mean * 2f + " current flux: " + flux);
+                System.out.println("--------------------------------");
+                
+            }
+
+                // if(tone != calculateTone(fft.getSpectrum(), frequ_calc) &&
+                // calculateTone(fft.getSpectrum(), frequ_calc) > 0) {
+                // System.out.println("------------------------------");
+                // System.out.println("FLUX: " +flux +" treshhold: " +mean * 1.5f);
+                // System.out.println("New Tone on: " +(int)calculateTone(fft.getSpectrum(),
+                // frequ_calc));
+                // tone = (int)calculateTone(fft.getSpectrum(), frequ_calc);
+                // }
+
+
             // Wir brauchen von der FFT das Spectrum
             // The spectrum tells us for each frequency how much the frequency contributes to the
             // original time domain audio signal.
             // When we transform 1024 samples we get 513 frequency bins e
-            //  http://www.badlogicgames.com/wordpress/?cat=18&paged=1
+            // http://www.badlogicgames.com/wordpress/?cat=18&paged=1
             // http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.332.989&rep=rep1&type=pdf
 
-            // spectral flux.
-            float flux = 0;
-            for (int i = 0; i < spectrum.length; i++) {
-                float value = (spectrum[i] - last_spectrum[i]);
-                
-                if( value > 20) {
-                  final BitSet peaks = AudioUtilities.peaks(new_spectrum, 3, 0.2f);
-                  List<Vec2> list = new ArrayList<>();
-                  for (int y = peaks.nextSetBit(0); y >= 0; y = peaks.nextSetBit(y + 1)){
-                      list.add(new Vec2(new_spectrum[y], fft.idx2f(y)));
-                  }
-                  Collections.sort(list, (v0, v1) -> Float.compare(v0.x, v1.x));
-                  float[] pitch = new float[list.size()];
-                  for (int y = 0; y < pitch.length; y++){
-                      pitch[y] = list.get(y).y;
-                  }
-                  if(pitch.length > 0 && i > 0) {
-                      //double tone = 69 + 12 * (Math.log(pitch[0] / 440) / Math.log(2));
-//                      System.out.println("69 + 12 * Math.log("+i +" " +frequ_calc +" / 440) / log(2))");
-                      double tone = 69 + 12 * (Math.log(i*frequ_calc / 440) / Math.log(2));
-                      System.out.println(tone);
-                      try {
-                          noteOn((int)tone, 0);
-                          
-                      } catch (InvalidMidiDataException e) {
-                          // TODO Auto-generated catch block
-                          e.printStackTrace();
-                      }
-                  }
-                    
-                    
-                    
-                    
-                    
-                    
-                }
-                flux += value < 0? 0: value;
-            }
-            spectralFlux.add(flux);
-            
-            if(flux > 100){}
-            
-            // TODO Find note:
-//            final BitSet peaks = AudioUtilities.peaks(new_spectrum, 3, 0.2f);
-//            List<Vec2> list = new ArrayList<>();
-//            for (int i = peaks.nextSetBit(0); i >= 0; i = peaks.nextSetBit(i + 1)){
-//                list.add(new Vec2(new_spectrum[i], fft.idx2f(i)));
-//            }
-//            Collections.sort(list, (v0, v1) -> Float.compare(v0.x, v1.x));
-//            float[] pitch = new float[list.size()];
-//            for (int i = 0; i < pitch.length; i++){
-//                pitch[i] = list.get(i).y;
-//            }
-//            if(pitch.length > 0) {
-//                double tone = 69 + 12 * (Math.log(pitch[0] / 440) / Math.log(2));
-//                System.out.println(tone);
-//                try {
-//                    noteOn((int)tone, 0);
-//                    
-//                } catch (InvalidMidiDataException e) {
-//                    // TODO Auto-generated catch block
-//                    e.printStackTrace();
-//                }
-//            }
-
             // Stereo to mono
-            if (target.getNumChannels() > 1) {
-                System.out.println("Should be converted to mono");
-                samples = target.getFrame().getMonoSamples();
-            } else {
-                samples = target.getFrame().samples;
-            }
-
-           
+            // if (target.getNumChannels() > 1) {
+            // System.out.println("Should be converted to mono");
+            // samples = target.getFrame().getMonoSamples();
+            // } else {
+            // samples = target.getFrame().samples;
+            // }
 
             // AudioUtilities.multiplyHarmonics(transformed, 2);
             // final BitSet peaks = AudioUtilities.peaks(transformed, 3, 0.2f);
@@ -203,6 +165,42 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
             // }
         }
 
+        // Get difference from frequencies
+        private float calculateFlux() {
+            float flux = 0;
+            for (int i = 0; i < spectrum.length; i++) {
+                float value = (spectrum[i] - last_spectrum[i]);
+                value = (value + Math.abs(value)) / 2;
+                flux += value < 0 ? 0 : value;
+            }
+
+            return flux;
+        }
+        
+        
+        private float calcualteTreshhold(int start, int end) {
+            float mean = 0;
+            for (int j = start; j <= end; j++) {
+                mean += spectralFlux.get(j);
+            }
+            mean /= (end - start);
+            return mean * 2f;
+            
+        }
+
+    }
+
+    private int calculateTone(float[] spectrum, float frequ_calc) {
+        float max = 0;
+        int idx = 0;
+        for (int i = 0; i < spectrum.length; i++) {
+            if (max < spectrum[i]) {
+                idx = i;
+            }
+            max = Math.max(max, spectrum[i]);
+        }
+        Double value = 69 + 12 * (Math.log(idx * frequ_calc / 440) / Math.log(2));
+        return value.isInfinite() ? 0 : value.intValue();
     }
 
 }
