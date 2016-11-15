@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 
@@ -55,18 +56,15 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
     private class Converter extends AbstractRenderCommand<IAudioRenderTarget> {
 
         private FFT fft;
-        private float[] samples = new float[1024];
+//        private float[] samples = new float[1024];
         private BlockBuffer blockBuffer;
         private Plotter plot;
         int idx = 0;
         int buffer = 0;
-        private float max = 0f;
 
-        private float[] spectrum = new float[1024 / 2];
-        private float[] last_spectrum = new float[1024 / 2];
+        private float[] spectrum = new float[1024];
+        private float[] last_spectrum = new float[1024];
         List<Float> spectralFlux = new ArrayList<Float>();
-
-        int tone = 0;
 
         List<Float> threshold = new ArrayList<>();
 
@@ -90,16 +88,12 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
         @Override
         protected void run(IAudioRenderTarget target) throws RenderCommandException {
             this.buffer += 1;
-            if (this.buffer % 9 != 0) {
-                int index = ((this.buffer % 9) - 1) * 128;
-
-                for (int i = 0; i < target.getFrame().samples.length; i++) {
-                    this.samples[index + i] = target.getFrame().samples[i];
-                }
+            if (this.buffer % 4 != 0) {
                 return;
             }
+            
             this.idx += 1;
-            float frequ_calc = (target.getFrame().sRate / 2) / (blockBuffer.size() / 2) / 2; // 22050
+//            float frequ_calc = (target.getFrame().sRate / 2) / (blockBuffer.size() / 2) / 2; // 22050
                                                                                              // /
                                                                                              // 513
                                                                                              // / 2
@@ -109,17 +103,29 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
             // Set new spectrum
             System.arraycopy(fft.power().clone(), 0, spectrum, 0, spectrum.length);
 
+//            float flux = fft.power(25, 16000); //
             float flux = calculateFlux();
             spectralFlux.add(flux);
 
             // Now we have to decide if this amplitude is enough high as a
             // new tone.
-            float mean = calcualteTreshhold(Math.max(0, this.idx - 50), Math.min(spectralFlux.size() - 1, this.idx + 50));
+            float mean = calcualteTreshhold(Math.max(0, this.idx - 150), Math.min(spectralFlux.size() - 1, this.idx + 150));
             threshold.add(mean);
 
             if (flux > mean) {
+                int[] actual_tone = getVelocities();
+                
+                int maxIndex = 0;
+                for(int i = 0; i < actual_tone.length; i++){
+                    int newVelo = actual_tone[i];
+                    if(newVelo > actual_tone[maxIndex]){
+                        maxIndex = i;
+                    }
+                }
+                System.out.println(maxIndex);
+                
                 System.out.println("");
-                System.out.println("TONE! Mean: " + mean * 2f + " current flux: " + flux);
+                System.out.println("TONE! Mean: " + mean + " current flux: " + flux);
                 System.out.println("--------------------------------");
                 
             }
@@ -170,7 +176,7 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
             float flux = 0;
             for (int i = 0; i < spectrum.length; i++) {
                 float value = (spectrum[i] - last_spectrum[i]);
-                value = (value + Math.abs(value)) / 2;
+                value = (float) ((value + Math.abs(value)) / (2 * Math.pow(2, i+1)));
                 flux += value < 0 ? 0 : value;
             }
 

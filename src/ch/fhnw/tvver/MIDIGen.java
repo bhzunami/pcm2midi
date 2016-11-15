@@ -18,7 +18,7 @@ public class MIDIGen {
 		Track	track = sequence.createTrack();
 
 		long tick = 0;
-		for(int i = Integer.parseInt(args[1]); i < Integer.parseInt(args[2]); i++) {
+		for(int i = Integer.parseInt(args[1]); i <= Integer.parseInt(args[2]); i++) {
 			track.add(new MidiEvent(new ShortMessage(ShortMessage.NOTE_ON, 0, i, 64), tick));
 			tick++;
 			track.add(new MidiEvent(new ShortMessage(ShortMessage.NOTE_OFF, 0, i, 64), tick));
