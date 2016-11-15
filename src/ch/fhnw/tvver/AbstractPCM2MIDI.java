@@ -15,7 +15,7 @@ import ch.fhnw.ether.media.RenderCommandException;
 import ch.fhnw.ether.media.RenderProgram;
 
 public abstract class AbstractPCM2MIDI {
-	enum Flags {SYNTH, WAVE, REPORT}
+	enum Flags {SYNTH, WAVE, REPORT, DEBUG}
 
 	private final PCM2MIDIShell p2ms;
 	private       Throwable     exception;
@@ -24,7 +24,7 @@ public abstract class AbstractPCM2MIDI {
 	 * Signal a note on MIDI event. The note will be recorded at the frame time this method is called.</code>.
 	 * @throws InvalidMidiDataException 
 	 */
-	protected void noteOn(int key, int velocity) throws InvalidMidiDataException {
+	protected void noteOn(int key, int velocity) {
 		p2ms.noteOn(key, velocity);
 	}
 
@@ -32,12 +32,12 @@ public abstract class AbstractPCM2MIDI {
 	 * Signal a note off MIDI event. The note will be recorded at the frame time this method is called.</code>.
 	 * @throws InvalidMidiDataException 
 	 */
-	protected void noteOff(int key, int velocity) throws InvalidMidiDataException {
+	protected void noteOff(int key, int velocity) {
 		p2ms.noteOn(key, 0);
 	}
-	
+
 	protected abstract void initializePipeline(RenderProgram<IAudioRenderTarget> program);
-	
+
 	/**
 	 * Create a PCM2MIDI instance.
 	 * 
@@ -52,19 +52,19 @@ public abstract class AbstractPCM2MIDI {
 	protected AbstractPCM2MIDI(File track, EnumSet<Flags> flags) throws UnsupportedAudioFileException, IOException, MidiUnavailableException, InvalidMidiDataException, RenderCommandException {
 		p2ms = new PCM2MIDIShell(track, flags);
 	}
-	
+
 	//--- for testing
-	
+
 	protected final int[] getVelocities() {
 		return p2ms.tracker.getVelocities();
 	}
-	
+
 	//--- internal interface
 
 	final PCM2MIDIShell getShell() {
 		return p2ms;
 	}
-	
+
 	final SortedSet<MidiEvent> getRefMidi() {
 		return p2ms.getRefMidi();
 	}

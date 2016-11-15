@@ -3,7 +3,6 @@ package ch.fhnw.tvver;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -23,6 +22,8 @@ import ch.fhnw.ether.audio.fx.FFT;
 import ch.fhnw.ether.media.AbstractRenderCommand;
 import ch.fhnw.ether.media.RenderCommandException;
 import ch.fhnw.ether.media.RenderProgram;
+import ch.fhnw.ether.ui.PlotWindow;
+import ch.fhnw.util.color.RGB;
 
 public class PCM2MidConverter extends AbstractPCM2MIDI {
     // Attack herunter schrauben
@@ -44,6 +45,7 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
         BlockBuffer blockBuffer = new BlockBuffer(1024, true, Window.HANN);
         Plotter plotter = new Plotter("Tone detection", 1000, 1000);
         // plotter.plot();
+        
 
         // program.addLast(new Distort());
         program.addLast(new DCRemove());
@@ -51,6 +53,8 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
         program.addLast(fft);
 
         program.addLast(new Converter(fft, blockBuffer, plotter));
+        
+        PlotWindow window = new PlotWindow(program);
         // program.addLast(new Converter(fft, blockBuffer));
         // new JFrame().setVisible(true);
     }
@@ -66,6 +70,9 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
         private Plotter plot;
         int idx = 0;
         int buffer = 0;
+        
+        //bar(list, RGB.GRAY)
+        // point(correction, 0, 15, RGB.RED) value
 
         private float[] spectrum = new float[1024];
         private float[] last_spectrum = new float[1024];
@@ -74,29 +81,23 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
         List<Float> threshold = new ArrayList<>();
 
         public Converter(FFT fft, BlockBuffer blockBuffer) {
+            fft.addLast(this);
             this.fft = fft;
             this.blockBuffer = blockBuffer;
         }
 
         public Converter(FFT fft, BlockBuffer blockBuffer, Plotter plot) {
+            fft.addLast(this);
             this.fft = fft;
             this.blockBuffer = blockBuffer;
             this.plot = plot;
         }
 
         @Override
-        protected void init(IAudioRenderTarget target) throws RenderCommandException {
-            // do nothing
-
-        }
+        protected void init(IAudioRenderTarget target) throws RenderCommandException {}
 
         @Override
         protected void run(IAudioRenderTarget target) throws RenderCommandException {
-            this.buffer += 1;
-            if (this.buffer % 4 != 0) {
-                return;
-            }
-            
             this.idx += 1;
 //            float frequ_calc = (target.getFrame().sRate / 2) / (blockBuffer.size() / 2) / 2; // 22050
                                                                                              // /
@@ -118,8 +119,7 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
             threshold.add(mean);
 
             if (flux > mean) {
-                int[] actual_tone = getVelocities();
-                
+                int[] actual_tone = getVelocities();               
                 int maxIndex = 0;
                 for(int i = 0; i < actual_tone.length; i++){
                     int newVelo = actual_tone[i];
@@ -127,19 +127,33 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
                         maxIndex = i;
                     }
                 }
-//                System.out.println(maxIndex);
-//                
+                
+                if(maxIndex >= 21){
+                	Long lastPlayed = playedNotes.getOrDefault(maxIndex, 0L);
+                	long now = System.currentTimeMillis();
+                	long diff = now - lastPlayed;
+                	if(diff > 100){
+                		System.out.println(diff + "    " + maxIndex);
+                		playedNotes.put(maxIndex, now);
+                		noteOn(maxIndex, 1);
+                		noteOff(maxIndex, 1);
+                	}
+                }
+                
+                
+                clear();
+                bars(new float[] {1,2,3,4,5,6,7}, RGB.MAGENTA);
+                bars(new float[] {1,2,3,4,5,6,7}, RGB.MAGENTA);
+                bars(new float[] {1,2,3,4,5,6,7}, RGB.MAGENTA);
+                bars(new float[] {1,2,3,4,5,6,7}, RGB.MAGENTA);
+                bars(new float[] {1,2,3,4,5,6,7}, RGB.MAGENTA);
+                bars(new float[] {1,2,3,4,5,6,7}, RGB.MAGENTA);
+                
 //                System.out.println("");
 //                System.out.println("TONE! Mean: " + mean + " current flux: " + flux);
 //                System.out.println("--------------------------------");
                 
-                TarsosDspMpm mpm = new TarsosDspMpm(target.getSampleRate(), 1024);
-                PitchDetectionResult pitch = mpm.getPitch(spectrum);
-                if(pitch.isPitched()){
-             	   float freq = pitch.getPitch();
-             	   int note = (int) (69 + 12 * (Math.log(freq / 440) / Math.log(2)));
-             	   System.out.println(String.format("%-20s%-10s", freq, note));
-                }
+               
             }
 
                 // if(tone != calculateTone(fft.getSpectrum(), frequ_calc) &&
