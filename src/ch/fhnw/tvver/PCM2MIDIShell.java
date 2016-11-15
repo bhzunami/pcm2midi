@@ -32,19 +32,21 @@ import ch.fhnw.ether.media.RenderCommandException;
 import ch.fhnw.ether.media.RenderProgram;
 import ch.fhnw.ether.platform.Platform;
 import ch.fhnw.ether.ui.ParameterWindow;
+import ch.fhnw.ether.ui.PlotWindow;
 import ch.fhnw.ether.ui.ParameterWindow.Flag;
 import ch.fhnw.tvver.AbstractPCM2MIDI.Flags;
 import ch.fhnw.util.ByteList;
+import ch.fhnw.util.IntList;
 import ch.fhnw.util.Log;
 import ch.fhnw.util.TextUtilities;
 
 public final class PCM2MIDIShell {
 	private static final Log log = Log.create();
-	
+
 	private final static double         SEC2US      = 1000000;
 	private final static double         US2SEC      = 1 / SEC2US;
 	private final static double         MAX_LATENCY = 0.1;
-	
+
 	private double                      time;
 	private int                         numDetectedNotes;
 	private int                         numTrueDetectedNotes;
@@ -77,7 +79,7 @@ public final class PCM2MIDIShell {
 			midiSeq   = new Sequence(Sequence.SMPTE_25, (int) (SEC2US / Sequence.SMPTE_25));
 			midiTrack = midiSeq.createTrack(); 
 		}
-		
+
 		URLAudioSource src = new URLAudioSource(track.toURI().toURL(), 1);
 		src.getMidiEvents(midiRef);
 		for(MidiEvent e : midiRef) {
@@ -85,53 +87,64 @@ public final class PCM2MIDIShell {
 			if(m instanceof ShortMessage && (m.getMessage()[0] & 0xFF) == ShortMessage.NOTE_ON && (m.getMessage()[2] > 0))
 				numRefNotes++;
 		}
-		
+
 		tracker.setRefMidi(midiRef);
 		program = new RenderProgram<>(src, tracker);
 	}
-	
+
 	public void start(AbstractPCM2MIDI impl) throws RenderCommandException {
 		impl.initializePipeline(program);
-		
-		new ParameterWindow(program, Flag.EXIT_ON_CLOSE, Flag.CLOSE_ON_STOP);
 
+		new ParameterWindow(program, Flag.EXIT_ON_CLOSE, Flag.CLOSE_ON_STOP);
+		new PlotWindow(program);
+		
 		audioOut = new JavaSoundTarget(pcmOut);
 		audioOut.useProgram(program);
 		audioOut.start();
 	}
 
-	void noteOn(int key, int velocity) throws InvalidMidiDataException {
+	void noteOn(int key, int velocity) {
 		time              = audioOut.getFrame().playOutTime;
 		double noteOnTime = time;
-		
-		MidiEvent noteOn  = new MidiEvent(new ShortMessage(ShortMessage.NOTE_ON,  0, key, velocity), (long) (noteOnTime * SEC2US));
-		MidiEvent noteOff = new MidiEvent(new ShortMessage(ShortMessage.NOTE_OFF, 0, key), (long) ((noteOnTime + 0.3) * SEC2US));
 
-		if(playbackChannel != null) {
-			playbackChannel.noteOn(key, velocity);
-			pendingNoteOffs.add(noteOff);
-		}
+		try {
+			MidiEvent noteOn  = new MidiEvent(new ShortMessage(ShortMessage.NOTE_ON,  0, key, velocity), (long) (noteOnTime * SEC2US));
+			MidiEvent noteOff = new MidiEvent(new ShortMessage(ShortMessage.NOTE_OFF, 0, key), (long) ((noteOnTime + 0.3) * SEC2US));
 
-		if(midiTrack != null) {
-			midiTrack.add(noteOn);
-			midiTrack.add(noteOff);
+			if(playbackChannel != null) {
+				playbackChannel.noteOn(key, velocity);
+				pendingNoteOffs.add(noteOff);
+			}
 
-			for(MidiEvent e : midiRef.headSet(noteOn, true).descendingSet()) {
-				double lat = (noteOn.getTick() - e.getTick()) * US2SEC;
-				if(lat > MAX_LATENCY) {
-					numFalseDetectedNotes++;
-					break;
-				}
+			if(midiTrack != null) {
+				midiTrack.add(noteOn);
+				midiTrack.add(noteOff);
 
-				if(noteOn.getMessage().getMessage()[1] == e.getMessage().getMessage()[1]) {
-					minLat = Math.min(minLat, lat);
-					maxLat = Math.max(maxLat, lat);
-					sumLat += lat;
-					numDetectedNotes++;
-					numTrueDetectedNotes++;
-					break;
-				}
-			} 
+				for(MidiEvent e : midiRef.headSet(noteOn, true).descendingSet()) {
+					double lat = (noteOn.getTick() - e.getTick()) * US2SEC;
+					if(lat > MAX_LATENCY) {
+						numFalseDetectedNotes++;
+						break;
+					}
+
+					if(noteOn.getMessage().getMessage()[1] == e.getMessage().getMessage()[1]) {
+						minLat = Math.min(minLat, lat);
+						maxLat = Math.max(maxLat, lat);
+						sumLat += lat;
+						numDetectedNotes++;
+						numTrueDetectedNotes++;
+						break;
+					}
+				} 
+			}
+			IntList notes = new IntList();
+			int[]   vs    = tracker.getVelocities();
+			for(int i = 0; i < vs.length; i++)
+				if(vs[i] > 0) notes.add(i);
+			if(flags.contains(Flags.DEBUG))
+				System.out.println(key + ":" + notes);
+		} catch(Throwable t) {
+			log.warning(t);
 		}
 	}
 
@@ -153,7 +166,7 @@ public final class PCM2MIDIShell {
 		double trueDetectedRatio  = numTrueDetectedNotes /  (double)numRefNotes; 
 		double falseDetectedRatio = numFalseDetectedNotes / (double)numRefNotes; 
 
-		result += (1 + (5 * Math.min(trueDetectedRatio-falseDetectedRatio, 1))) + SEP;
+		result += (1 + (5 * Math.max(0, Math.min(trueDetectedRatio-falseDetectedRatio, 1)))) + SEP;
 
 		return result;
 	}
@@ -175,19 +188,19 @@ public final class PCM2MIDIShell {
 			log.info("Usage: " + PCM2MIDIShell.class.getName() + " <audio_file> <class>");
 			System.exit(0);
 		}
-		
+
 		Platform.get().init();
-		
+
 		File        src    = new File(args[0]);
 		PrintWriter report = new PrintWriter(new File(src.getParent(), args[1] + "_report.txt"));
 
 		report.println(COLUMNS);
 
 		Class<AbstractPCM2MIDI> cls = (Class<AbstractPCM2MIDI>)Class.forName("ch.fhnw.tvver." + args[1]);
-		
+
 		AbstractPCM2MIDI pcm2midi = cls.getConstructor(File.class).newInstance(src);
 		pcm2midi.getShell().start(pcm2midi);
-		
+
 		Platform.get().addShutdownTask(new Runnable() {
 			@Override
 			public void run() {
@@ -223,8 +236,8 @@ public final class PCM2MIDIShell {
 				new AudioInputStream(new ByteArrayInputStream(pcmOut._getArray(), 0, pcmOut.size()), 
 						audioOut.getJavaSoundAudioFormat(), 
 						pcmOut.size() / 4), 
-						Type.WAVE, 
-						file);
+				Type.WAVE, 
+				file);
 	}
 
 	public SortedSet<MidiEvent> getRefMidi() {
