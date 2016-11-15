@@ -61,6 +61,7 @@ public final class PCM2MIDIShell {
 	private List<MidiEvent>             pendingNoteOffs = new LinkedList<MidiEvent>();
 	private final RenderProgram<IAudioRenderTarget> program;
 	private       JavaSoundTarget       audioOut;
+	final MidiKeyTracker                tracker        = new MidiKeyTracker();
 	private TreeSet<MidiEvent>          midiRef        = new TreeSet<MidiEvent>(new Comparator<MidiEvent>() {
 		@Override
 		public int compare(MidiEvent o1, MidiEvent o2) {
@@ -85,7 +86,8 @@ public final class PCM2MIDIShell {
 				numRefNotes++;
 		}
 		
-		program = new RenderProgram<>(src);
+		tracker.setRefMidi(midiRef);
+		program = new RenderProgram<>(src, tracker);
 	}
 	
 	public void start(AbstractPCM2MIDI impl) throws RenderCommandException {
@@ -184,6 +186,7 @@ public final class PCM2MIDIShell {
 		Class<AbstractPCM2MIDI> cls = (Class<AbstractPCM2MIDI>)Class.forName("ch.fhnw.tvver." + args[1]);
 		
 		AbstractPCM2MIDI pcm2midi = cls.getConstructor(File.class).newInstance(src);
+		pcm2midi.getShell().start(pcm2midi);
 		
 		Platform.get().addShutdownTask(new Runnable() {
 			@Override

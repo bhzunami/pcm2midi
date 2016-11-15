@@ -17,7 +17,7 @@ import ch.fhnw.ether.media.RenderProgram;
 public abstract class AbstractPCM2MIDI {
 	enum Flags {SYNTH, WAVE, REPORT}
 
-	private final PCM2MIDIShell b2ms;
+	private final PCM2MIDIShell p2ms;
 	private       Throwable     exception;
 
 	/**
@@ -25,7 +25,7 @@ public abstract class AbstractPCM2MIDI {
 	 * @throws InvalidMidiDataException 
 	 */
 	protected void noteOn(int key, int velocity) throws InvalidMidiDataException {
-		b2ms.noteOn(key, velocity);
+		p2ms.noteOn(key, velocity);
 	}
 
 	/**
@@ -33,7 +33,7 @@ public abstract class AbstractPCM2MIDI {
 	 * @throws InvalidMidiDataException 
 	 */
 	protected void noteOff(int key, int velocity) throws InvalidMidiDataException {
-		b2ms.noteOn(key, 0);
+		p2ms.noteOn(key, 0);
 	}
 	
 	protected abstract void initializePipeline(RenderProgram<IAudioRenderTarget> program);
@@ -50,14 +50,23 @@ public abstract class AbstractPCM2MIDI {
 	 * @throws RenderCommandException 
 	 */
 	protected AbstractPCM2MIDI(File track, EnumSet<Flags> flags) throws UnsupportedAudioFileException, IOException, MidiUnavailableException, InvalidMidiDataException, RenderCommandException {
-		b2ms = new PCM2MIDIShell(track, flags);
-		b2ms.start(this);
+		p2ms = new PCM2MIDIShell(track, flags);
 	}
-
+	
+	//--- for testing
+	
+	protected final int[] getVelocities() {
+		return p2ms.tracker.getVelocities();
+	}
+	
 	//--- internal interface
 
+	final PCM2MIDIShell getShell() {
+		return p2ms;
+	}
+	
 	final SortedSet<MidiEvent> getRefMidi() {
-		return b2ms.getRefMidi();
+		return p2ms.getRefMidi();
 	}
 
 	final void handleException(Throwable t) {
@@ -72,16 +81,16 @@ public abstract class AbstractPCM2MIDI {
 		if(exception != null)
 			return exception.getClass().getName() + ":" + exception.getMessage();
 		else
-			return b2ms.getReport();
+			return p2ms.getReport();
 	}
 
 	final boolean getFlag(Flags flag) {
-		return b2ms.getFlag(flag);
+		return p2ms.getFlag(flag);
 	}
 
 	final void writeWAV(File file) throws IOException {
 		try {
-			b2ms.writeWAV(file);
+			p2ms.writeWAV(file);
 		} catch(IOException ex) {
 			throw ex;
 		} catch(Throwable t) {
