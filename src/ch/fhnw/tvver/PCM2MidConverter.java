@@ -2,10 +2,11 @@ package ch.fhnw.tvver;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.MidiUnavailableException;
@@ -13,6 +14,7 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 
 import ch.fhnw.ether.audio.AudioUtilities.Window;
 import ch.fhnw.ether.audio.BlockBuffer;
+import ch.fhnw.ether.audio.ButterworthFilter;
 import ch.fhnw.ether.audio.IAudioRenderTarget;
 import ch.fhnw.ether.audio.fx.AutoGain;
 import ch.fhnw.ether.audio.fx.DCRemove;
@@ -54,6 +56,9 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
 
     private class Converter extends AbstractRenderCommand<IAudioRenderTarget> {
 
+    	private Map<Integer, Long> playedNotes = new HashMap<>();
+    	private long time = System.currentTimeMillis();
+    	
         private FFT fft;
         private float[] samples = new float[1024];
         private BlockBuffer blockBuffer;
@@ -62,8 +67,8 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
         int buffer = 0;
         private float max = 0f;
 
-        private float[] spectrum = new float[1024 / 2];
-        private float[] last_spectrum = new float[1024 / 2];
+        private float[] spectrum = new float[1024];
+        private float[] last_spectrum = new float[1024];
         List<Float> spectralFlux = new ArrayList<Float>();
 
         int tone = 0;
@@ -114,14 +119,18 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
 
             // Now we have to decide if this amplitude is enough high as a
             // new tone.
-            float mean = calcualteTreshhold(Math.max(0, this.idx - 50), Math.min(spectralFlux.size() - 1, this.idx + 50));
+            float mean = calcualteTreshhold(Math.max(0, this.idx - 150), Math.min(spectralFlux.size() - 1, this.idx + 150));
             threshold.add(mean);
 
             if (flux > mean) {
-                System.out.println("");
-                System.out.println("TONE! Mean: " + mean * 2f + " current flux: " + flux);
-                System.out.println("--------------------------------");
-                
+               TarsosDspMpm mpm = new TarsosDspMpm(target.getSampleRate(), 1024);
+               PitchDetectionResult pitch = mpm.getPitch(samples);
+               if(pitch.isPitched()){
+            	   float freq = pitch.getPitch();
+            	   int note = (int) (69 + 12 * (Math.log(freq / 440) / Math.log(2)));
+            	   System.out.println(String.format("%-20s%-10s", freq, note));
+               }
+              
             }
 
                 // if(tone != calculateTone(fft.getSpectrum(), frequ_calc) &&
@@ -170,7 +179,7 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
             float flux = 0;
             for (int i = 0; i < spectrum.length; i++) {
                 float value = (spectrum[i] - last_spectrum[i]);
-                value = (value + Math.abs(value)) / 2;
+                value = (float) ((value + Math.abs(value)) / 2 );
                 flux += value < 0 ? 0 : value;
             }
 
