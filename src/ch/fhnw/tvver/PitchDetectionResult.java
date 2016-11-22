@@ -1,75 +1,27 @@
 package ch.fhnw.tvver;
 
-public class PitchDetectionResult {	
-	/**
-	 * The pitch in Hertz.
-	 */
-	private float pitch;
+public class PitchDetectionResult {
 	
-	private float probability;
+	private float freq;
+	private boolean isPitched;
 	
-	private boolean pitched;
-	
-	public PitchDetectionResult(){
-		pitch = -1;
-		probability = -1;
-		pitched = false;
-	}
-	
-	/**
-	 * A copy constructor. Since PitchDetectionResult objects are reused for performance reasons, creating a copy can be practical.
-	 * @param other
-	 */
-	public PitchDetectionResult(PitchDetectionResult other){
-		this.pitch = other.pitch;
-		this.probability = other.probability;
-		this.pitched = other.pitched;
-	}
-		 
-	
-	/**
-	 * @return The pitch in Hertz.
-	 */
-	public float getPitch() {
-		return pitch;
+	public PitchDetectionResult(float freq, boolean isPitched) {
+		this.freq = freq;
+		this.isPitched = isPitched;
 	}
 
-	public void setPitch(float pitch) {
-		this.pitch = pitch;
-	}
-	
-	/* (non-Javadoc)
-	 * @see java.lang.Object#clone()
-	 */
-	public PitchDetectionResult clone(){
-		return new PitchDetectionResult(this);
+	public float getFreq() {
+		return freq;
 	}
 
-	/**
-	 * @return A probability (noisiness, (a)periodicity, salience, voicedness or
-	 *         clarity measure) for the detected pitch. This is somewhat similar
-	 *         to the term voiced which is used in speech recognition. This
-	 *         probability should be calculated together with the pitch. The
-	 *         exact meaning of the value depends on the detector used.
-	 */
-	public float getProbability() {
-		return probability;
+	public int getMidiNote() {
+		return (int) (69 + 12 * (Math.log(this.freq / 440) / Math.log(2)));
 	}
 
-	public void setProbability(float probability) {
-		this.probability = probability;
-	}
-
-	/**
-	 * @return Whether the algorithm thinks the block of audio is pitched. Keep
-	 *         in mind that an algorithm can come up with a best guess for a
-	 *         pitch even when isPitched() is false.
-	 */
 	public boolean isPitched() {
-		return pitched;
+		return isPitched;
 	}
+	
+	
 
-	public void setPitched(boolean pitched) {
-		this.pitched = pitched;
-	}	
 }
