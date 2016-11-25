@@ -16,6 +16,8 @@ public class OnSetDetection extends AbstractRenderCommand<IAudioRenderTarget> im
     public static final float[] bands = { 80, 4000, 4000, 10000, 10000, 16000 };
     private FFT fft;
     
+    private RGB[] colors = new RGB[] {RGB.GREEN, RGB.YELLOW, RGB.BLUE};
+    
     public boolean tone = false;
     
     private List<Float[]> spectralFlux = new ArrayList<>();
@@ -30,7 +32,7 @@ public class OnSetDetection extends AbstractRenderCommand<IAudioRenderTarget> im
 
     @Override
     protected void run(IAudioRenderTarget target) throws RenderCommandException {
-        
+        for(int i = 0; i < 7; i++) clear();
         
         System.arraycopy(spectrum, 0, last_spectrum, 0, spectrum.length);
         for(int i=0; i < bands.length/2; i++) {
@@ -47,21 +49,21 @@ public class OnSetDetection extends AbstractRenderCommand<IAudioRenderTarget> im
 //            spectrum[0] > mean[0] && spectrum[2] > mean[2] ||
 //            spectrum[1] > mean[1] && spectrum[2] > mean[2]) {
         
-        for(int i = 0; i < 7; i++) { 
-            clear();
-        }
+//        for(int i = 0; i < 7; i++) { 
+//            clear();
+//        }
         
 //        if(flux[0] > mean[0] && flux[1] > mean[1] && flux[2] > mean[2]) {
       if (flux[0] > mean[0] && flux[1] > mean[1] ||
           flux[0] > mean[0] && flux[2] > mean[2] ||
           flux[1] > mean[1] && flux[2] > mean[2]) {
             this.tone = true;
-            bar(1, RGB.YELLOW);
+            bar(1, RGB.RED);
         } else {
             this.tone = false;
-            clear();
         }
         this.idx++;
+        clear();
     }
     
     
@@ -86,7 +88,8 @@ public class OnSetDetection extends AbstractRenderCommand<IAudioRenderTarget> im
         }
         for(int i=0; i < 3; i++) {
             mean[i] /= (end - start);
-            mean[i] *= 2f;
+            mean[i] *= 3f;
+            bar(mean[i], colors[i]);
         }
         return mean;
         
