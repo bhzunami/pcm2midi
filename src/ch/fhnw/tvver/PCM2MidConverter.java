@@ -3,8 +3,6 @@ package ch.fhnw.tvver;
 import java.io.File;
 import java.io.IOException;
 import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.Map;
 
 import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.MidiUnavailableException;
@@ -26,6 +24,7 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
     // attack 0.015
 
     private static final float A_SUB_CONTRA_OCTAVE_FREQ = 25.5f;
+    private static final int HARMONICS = 5;
 
     public PCM2MidConverter(File track) throws UnsupportedAudioFileException, IOException, MidiUnavailableException,
             InvalidMidiDataException, RenderCommandException {
@@ -38,29 +37,27 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
         // gets repeated multiple times before and after.
         FFT fft = new FFT(A_SUB_CONTRA_OCTAVE_FREQ, Window.HANN);
 
-        OnSetDetection od = new OnSetDetection(fft);
+        OnSetDetection osd = new OnSetDetection(fft);
+        HpsPitchDetection hps = new HpsPitchDetection(fft, osd, HARMONICS);
 
         // program.addLast(new Distort());
         program.addLast(new DCRemove());
         program.addLast(new AutoGain());
         program.addLast(fft);
-        program.addLast(od);
-        program.addLast(new Converter(fft, od));
+        program.addLast(osd);
+        program.addLast(hps);
+        program.addLast(new Converter(osd, hps));
 
     }
 
     private class Converter extends AbstractRenderCommand<IAudioRenderTarget> implements IPlotable {
 
-        private Map<Integer, Long> playedNotes = new HashMap<>();
+        private OnSetDetection osd;
+        private HpsPitchDetection hps;
 
-        private FFT fft;
-        private OnSetDetection od;
-        int idx = 0;
-
-        public Converter(FFT fft, OnSetDetection od) {
-            fft.addLast(this);
-            this.fft = fft;
-            this.od = od;
+        public Converter(OnSetDetection osd, HpsPitchDetection hps) {
+            this.osd = osd;
+            this.hps = hps;
         }
 
         @Override
@@ -69,26 +66,11 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
 
         @Override
         protected void run(IAudioRenderTarget target) throws RenderCommandException {
-            this.idx += 1;
-
-            if (od.tone) {
-                System.out.println("New Tone\n");
+            if (osd.tone) {
+                PitchDetectionResult pitch = hps.getPitch();
+                System.out.println(String.format("%5d%20f", pitch.getMidiNote(), pitch.getFreq()));
             }
-
         }
-
-        private int calculateTone(float[] spectrum, float frequ_calc) {
-            float max = 0;
-            int idx = 0;
-            for (int i = 0; i < spectrum.length; i++) {
-                if (max < spectrum[i]) {
-                    idx = i;
-                }
-                max = Math.max(max, spectrum[i]);
-            }
-            Double value = 69 + 12 * (Math.log(idx * frequ_calc / 440) / Math.log(2));
-            return value.isInfinite() ? 0 : value.intValue();
-        }
-
+        
     }
 }

@@ -15,11 +15,15 @@ import ch.fhnw.ether.media.RenderCommandException;
 public class HpsPitchDetection extends AbstractRenderCommand<IAudioRenderTarget> {
 	
 	private FFT fft;
+	private OnSetDetection osd;
 	private int harmonics;
 	private LinkedList<Float> spectrum;
+	private PitchDetectionResult pitch;
 	
-	public HpsPitchDetection(FFT fft, int harmonics){
-		this.fft = fft;
+	public HpsPitchDetection(FFT fft, OnSetDetection osd, int harmonics){
+		fft.addLast(this);
+        this.fft = fft;
+		this.osd = osd;
 		this.harmonics = harmonics;
 		spectrum = new LinkedList<>();
 	}
@@ -27,24 +31,25 @@ public class HpsPitchDetection extends AbstractRenderCommand<IAudioRenderTarget>
 	@Override
 	protected void run(IAudioRenderTarget target) throws RenderCommandException {
 		float[] power = fft.power();
-		for(int index = power.length - 1; index >= 0; index--){
-			if(spectrum.size() >= fft.size() * 10){
-				spectrum.removeFirst();
-			}
-			spectrum.addLast(power[index]);
+		this.spectrum.clear();
+		for(float f : power){
+			this.spectrum.addLast(f);
+		}
+		if(this.osd.tone){
+			this.pitch = this.detectPitch(this.spectrum, this.harmonics);
 		}
 	}
 
-	public PitchDetectionResult getPitch() {
+	private PitchDetectionResult detectPitch(List<Float> samples, int harmonics) {
 	
 		List<List<Float>> downsamples = new ArrayList<>();
 		for(int index = 1; index <= harmonics; index++){
-			downsamples.add(downsample(spectrum, index));
+			downsamples.add(downsample(samples, index));
 		}
 
 		List<Float> hps = new ArrayList<>();
 
-		for (int index = downsamples.get(harmonics - 1).size() - 1; index >= 0; index--) {
+		for (int index = 0; index < downsamples.get(harmonics - 1).size(); index++) {
 			float product = 1;
 			for(int downsampleIdx = 0; downsampleIdx < harmonics; downsampleIdx++){				
 				product *= downsamples.get(downsampleIdx).get(index);
@@ -92,6 +97,10 @@ public class HpsPitchDetection extends AbstractRenderCommand<IAudioRenderTarget>
 			downsampled.add(samples.get(index));
 		}
 		return downsampled;
+	}
+	
+	public PitchDetectionResult getPitch(){
+		return this.pitch;
 	}
 	
 }

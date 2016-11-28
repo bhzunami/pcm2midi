@@ -1,7 +1,6 @@
 package ch.fhnw.tvver;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import ch.fhnw.ether.audio.IAudioRenderTarget;
