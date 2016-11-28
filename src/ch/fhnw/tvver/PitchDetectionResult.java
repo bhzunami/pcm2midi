@@ -15,13 +15,11 @@ public class PitchDetectionResult {
 	}
 
 	public int getMidiNote() {
-		return (int) (69 + 12 * (Math.log(this.freq / 440) / Math.log(2)));
+		return (int) Math.round(69 + 12 * (Math.log(this.freq / 440) / Math.log(2)));
 	}
 
 	public boolean isPitched() {
 		return isPitched;
 	}
 	
-	
-
 }
