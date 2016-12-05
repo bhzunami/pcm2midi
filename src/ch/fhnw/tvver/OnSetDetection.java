@@ -40,9 +40,12 @@ public class OnSetDetection extends AbstractRenderCommand<IAudioRenderTarget> im
         
         Float[] flux = calculateFlux();
         spectralFlux.add(flux);
-                
-        Float[] mean = calcualteTreshhold(Math.max(0, this.idx - 10), Math.min(spectralFlux.size() - 1, this.idx + 10));
-       
+        
+        
+        Float[] mean = calcualteTreshhold(Math.max(0, this.idx - 5), Math.min(spectralFlux.size() - 1, this.idx + 5));
+//        System.out.println("Current Flux: " +flux[0] +", " +flux[1] +", " +flux[2]);
+//        System.out.println("MEAN " +mean[0] +", " +mean[1] +", " +mean[2]);
+//       
         // Check if all are over treshholds
 //        if (spectrum[0] > mean[0] && spectrum[1] > mean[1] ||
 //            spectrum[0] > mean[0] && spectrum[2] > mean[2] ||
@@ -53,31 +56,62 @@ public class OnSetDetection extends AbstractRenderCommand<IAudioRenderTarget> im
 //        }
         
 //        if(flux[0] > mean[0] && flux[1] > mean[1] && flux[2] > mean[2]) {
-      if (flux[0] > mean[0] && flux[1] > mean[1] ||
-          flux[0] > mean[0] && flux[2] > mean[2] ||
-          flux[1] > mean[1] && flux[2] > mean[2]) {
-            this.tone = true;
-            bar(1, RGB.RED);
-        } else {
-            this.tone = false;
-        }
+        
+      if(flux[0] > 1 && flux[1] > 1) {
+          if ( flux[0] > mean[0] && flux[1] > mean[1] ) {
+              bar(1, RGB.RED);              
+          } 
+          
+      } else if(flux[0] > 1 && flux[2] > 1) {
+          if(flux[0] > mean[0] && flux[2] > mean[2]) {
+              bar(1, RGB.RED); 
+          } 
+      } else if(flux[1] > 1 && flux[2] > 1) {
+          if(flux[1] > mean[1] && flux[2] > mean[2]) {
+              bar(1, RGB.RED); 
+          } 
+      } else if(flux[0] > 1 && flux[1] < 1 && flux[2] < 1) {
+          if(flux[0] > mean[0] * 3f) {
+              bar(1, RGB.RED); 
+          }
+      } else if(flux[1] > 1 && flux[0] < 1 && flux[2] < 1) {
+          if(flux[1] > mean[1] * 3f) {
+              bar(1, RGB.RED); 
+          }
+      } else if(flux[2] > 1 && flux[1] < 1 && flux[0] < 1) {
+          if(flux[2] > mean[2] * 3f) {
+              bar(1, RGB.RED); 
+          }
+      }
+
+      
+      
+      
+//      if ( flux[0] > mean[0] && flux[1] > mean[1] ||
+//           flux[0] > mean[0] && flux[2] > mean[2] || 
+//           flux[1] > mean[1] && flux[2] > mean[2]) {
+//            this.tone = true;
+//            bar(1, RGB.RED);
+//        } else {
+//            this.tone = false;
+//        }
+      
         this.idx++;
         clear();
     }
-    
-    
+
     private Float[] calculateFlux() {
         Float[] flux = new Float[] {0f, 0f, 0f};
         for (int i = 0; i < 3; i++) {
             float value = spectrum[i] - last_spectrum[i];
-            flux[i] = value < 0 ? 0 : value;
+            flux[i] = (float) (value < 0 ? 0 : Math.round(value*100.0)/100.0);
         }
         return flux;
     }
     
     private Float[] calcualteTreshhold(int start, int end) {
         Float[] mean = new Float[] {0f, 0f, 0f};
-        
+      
         // Go over all spectralflux entries => run called
         for (int i = start; i <= end; i++) {
             // Go over the diffrent fft sizes
@@ -85,10 +119,14 @@ public class OnSetDetection extends AbstractRenderCommand<IAudioRenderTarget> im
             mean[1] += spectralFlux.get(i)[1];
             mean[2] += spectralFlux.get(i)[2];
         }
+                
         for(int i=0; i < 3; i++) {
-            mean[i] /= (end - start);
-            mean[i] *= 3f;
-            bar(mean[i], colors[i]);
+            float value = mean[i] / (end - start);
+            mean[i] = (float) (Math.round(value*100.0)/100.0);
+            point(mean[i], 0, 100, colors[i]);
+            mean[i] *= 1f;
+            //bar(mean[i], colors[i]);
+            
         }
         return mean;
         
