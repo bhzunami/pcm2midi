@@ -16,41 +16,32 @@ import ch.fhnw.ether.media.RenderCommandException;
 public class HpsPitchDetection extends AbstractRenderCommand<IAudioRenderTarget> {
 
 	private FFT fft;
-	private OnSetDetection osd;
 	private int harmonics;
 	private Map<Integer, Long> pitchHistory;
 	private PitchDetectionResult lastResult;
 
-	public HpsPitchDetection(FFT fft, OnSetDetection osd, int harmonics) {
+	public HpsPitchDetection(FFT fft, int harmonics) {
 		this.fft = fft;
-		this.osd = osd;
 		this.harmonics = harmonics;
 		this.pitchHistory = new HashMap<>();
 	}
 
 	@Override
 	protected void run(IAudioRenderTarget target) throws RenderCommandException {
-		float[] spectrum = this.fft.power();
-		if (this.osd.tone) {
-			this.lastResult = this.detectPitch(spectrum, this.harmonics);
-			if (this.lastResult.isPitched()) {
-				System.out.println(String.format("%5d%20f%20f", this.lastResult.getMidiNote(),
-						this.lastResult.getFreq(), this.lastResult.getAmplitude()));
-			}
-		}
 	}
 
-	private PitchDetectionResult detectPitch(float[] spectrum, int harmonics) {
+	public void detectPitch() {
+		float[] spectrum = this.fft.power();
 		List<List<Float>> downsamples = new ArrayList<>();
-		for (int index = 1; index <= harmonics; index++) {
+		for (int index = 1; index <= this.harmonics; index++) {
 			downsamples.add(this.downsample(spectrum, index));
 		}
 
 		List<Float> hps = new ArrayList<>();
 
-		for (int index = 0; index < downsamples.get(harmonics - 1).size(); index++) {
+		for (int index = 0; index < downsamples.get(this.harmonics - 1).size(); index++) {
 			float product = 1;
-			for (int downsampleIdx = 0; downsampleIdx < harmonics; downsampleIdx++) {
+			for (int downsampleIdx = 0; downsampleIdx < this.harmonics; downsampleIdx++) {
 				product *= downsamples.get(downsampleIdx).get(index);
 			}
 			hps.add(product);
@@ -70,15 +61,15 @@ public class HpsPitchDetection extends AbstractRenderCommand<IAudioRenderTarget>
 		float fundamentalFreq = this.fft.idx2f(maxIndex);
 		int midiNote = this.calcMidiNote(fundamentalFreq);
 
-		long now = System.currentTimeMillis();
 		long lastPlayed = this.pitchHistory.getOrDefault(midiNote, 0L);
-		this.pitchHistory.put(midiNote, now);
-
+		this.pitchHistory.put(midiNote, System.currentTimeMillis());
+		long now = this.pitchHistory.get(midiNote);
+		
 		boolean isPitched = true;
-		isPitched &= fundamentalFreq > 50.0f;
+		isPitched &= fundamentalFreq > 55.0f;
 		isPitched &= now - lastPlayed > 100;
 		isPitched &= amplitude > 100;
-		return new PitchDetectionResult(fundamentalFreq, amplitude, midiNote, isPitched);
+		this.lastResult =  new PitchDetectionResult(fundamentalFreq, amplitude, midiNote, isPitched);
 
 		// Octave errors are common (detection is sometimes an octave too high).
 		// To correct, apply this rule: if the second peak amplitude below
@@ -107,9 +98,13 @@ public class HpsPitchDetection extends AbstractRenderCommand<IAudioRenderTarget>
 	private int calcMidiNote(float freq) {
 		return (int) Math.ceil(69 + 12 * (Math.log(freq / 440) / Math.log(2)));
 	}
-	
-	public PitchDetectionResult getLastResult(){
+
+	public PitchDetectionResult getLastResult() {
 		return this.lastResult;
+	}
+	
+	public void clearResult() {
+		this.lastResult = null;
 	}
 
 }
