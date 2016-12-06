@@ -11,7 +11,6 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 import ch.fhnw.ether.audio.AudioUtilities.Window;
 import ch.fhnw.ether.audio.IAudioRenderTarget;
 import ch.fhnw.ether.audio.fx.AutoGain;
-import ch.fhnw.ether.audio.fx.DCRemove;
 import ch.fhnw.ether.audio.fx.FFT;
 import ch.fhnw.ether.media.AbstractRenderCommand;
 import ch.fhnw.ether.media.RenderCommandException;
@@ -24,7 +23,7 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
     // attack 0.015
 
     private static final float A_SUB_CONTRA_OCTAVE_FREQ = 25.5f;
-    private static final int HARMONICS = 5;
+    private static final int HARMONICS = 2;
 
     public PCM2MidConverter(File track) throws UnsupportedAudioFileException, IOException, MidiUnavailableException,
             InvalidMidiDataException, RenderCommandException {
@@ -41,7 +40,6 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
         OnSetDetection osd = new OnSetDetection(fft, hps);
 
         // program.addLast(new Distort());
-        program.addLast(new DCRemove());
         program.addLast(new AutoGain());
         program.addLast(fft);
         program.addLast(osd);
@@ -66,13 +64,13 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
 
         @Override
         protected void run(IAudioRenderTarget target) throws RenderCommandException {
-            PitchDetectionResult lastResult = hps.getLastResult();
+            PitchDetectionResult lastResult = this.hps.getLastResult();
             if(lastResult != null && lastResult.isPitched()) {
-                noteOn(lastResult.getMidiNote(), 64);
-                noteOff(lastResult.getMidiNote(), 64);
+                PCM2MidConverter.this.noteOn(lastResult.getMidiNote(), 64);
+                PCM2MidConverter.this.noteOff(lastResult.getMidiNote(), 64);
                 
             }
-            hps.clearResult();
+            this.hps.clearResult();
             
         }
         
