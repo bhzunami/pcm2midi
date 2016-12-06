@@ -39,7 +39,6 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
         HpsPitchDetection hps = new HpsPitchDetection(fft, HARMONICS);
         OnSetDetection osd = new OnSetDetection(fft, hps);
 
-        // program.addLast(new Distort());
         program.addLast(new AutoGain());
         program.addLast(fft);
         program.addLast(osd);
