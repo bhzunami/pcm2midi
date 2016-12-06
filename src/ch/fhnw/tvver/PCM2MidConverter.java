@@ -43,17 +43,15 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
         program.addLast(fft);
         program.addLast(osd);
         program.addLast(hps);
-        program.addLast(new Converter(osd, hps));
+        program.addLast(new Converter(hps));
 
     }
 
     private class Converter extends AbstractRenderCommand<IAudioRenderTarget> implements IPlotable {
 
-        private OnSetDetection osd;
         private HpsPitchDetection hps;
 
-        public Converter(OnSetDetection osd, HpsPitchDetection hps) {
-            this.osd = osd;
+        public Converter(HpsPitchDetection hps) {
             this.hps = hps;
         }
 
@@ -67,7 +65,6 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
             if(lastResult != null && lastResult.isPitched()) {
                 PCM2MidConverter.this.noteOn(lastResult.getMidiNote(), 64);
                 PCM2MidConverter.this.noteOff(lastResult.getMidiNote(), 64);
-                
             }
             this.hps.clearResult();
             
