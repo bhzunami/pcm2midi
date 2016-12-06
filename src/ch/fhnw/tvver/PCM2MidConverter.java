@@ -37,8 +37,8 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
         // gets repeated multiple times before and after.
         FFT fft = new FFT(A_SUB_CONTRA_OCTAVE_FREQ, Window.HANN);
 
-        OnSetDetection osd = new OnSetDetection(fft);
-        HpsPitchDetection hps = new HpsPitchDetection(fft, osd, HARMONICS);
+        HpsPitchDetection hps = new HpsPitchDetection(fft, HARMONICS);
+        OnSetDetection osd = new OnSetDetection(fft, hps);
 
         // program.addLast(new Distort());
         program.addLast(new DCRemove());
@@ -66,10 +66,14 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
 
         @Override
         protected void run(IAudioRenderTarget target) throws RenderCommandException {
-            if (osd.tone) {
-                PitchDetectionResult pitch = hps.getPitch();
-                System.out.println(String.format("%5d%20f", pitch.getMidiNote(), pitch.getFreq()));
+            PitchDetectionResult lastResult = hps.getLastResult();
+            if(lastResult != null && lastResult.isPitched()) {
+                noteOn(lastResult.getMidiNote(), 64);
+                noteOff(lastResult.getMidiNote(), 64);
+                
             }
+            hps.clearResult();
+            
         }
         
     }
