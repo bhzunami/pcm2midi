@@ -64,7 +64,7 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
             PitchDetectionResult lastResult = this.hps.getLastResult();
             if(lastResult != null && lastResult.isPitched()) {
                 PCM2MidConverter.this.noteOn(lastResult.getMidiNote(), 64);
-                PCM2MidConverter.this.noteOff(lastResult.getMidiNote(), 64);
+//                noteOff(lastResult.getMidiNote(), 64);  
             }
             this.hps.clearResult();
             

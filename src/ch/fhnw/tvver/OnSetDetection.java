@@ -53,22 +53,15 @@ public class OnSetDetection extends AbstractRenderCommand<IAudioRenderTarget> im
         
         // Durchschnittswert für die letzten 5 FFT
         Float[] mean = calcualteTreshhold(Math.max(0, this.idx - 5), Math.min(spectralFlux.size() - 1, this.idx + 5));
-//        System.out.println("Current Flux: " +flux[0] +", " +flux[1] +", " +flux[2]);
-//        System.out.println("MEAN " +mean[0] +", " +mean[1] +", " +mean[2]);
+        System.out.println("Current Flux: " +flux[0] +", " +flux[1] +", " +flux[2]);
+        System.out.println("MEAN " +mean[0] +", " +mean[1] +", " +mean[2]);
 //       
-        // Check if all are over treshholds
-//        if (spectrum[0] > mean[0] && spectrum[1] > mean[1] ||
-//            spectrum[0] > mean[0] && spectrum[2] > mean[2] ||
-//            spectrum[1] > mean[1] && spectrum[2] > mean[2]) {
-        
-//        for(int i = 0; i < 7; i++) { 
-//            clear();
-//        }
-        
-//        if(flux[0] > mean[0] && flux[1] > mean[1] && flux[2] > mean[2]) {
-      if ( flux[0] > mean[0] && flux[0] > 1 && flux[1] > mean[1] && flux[1] > 1||
-           flux[0] > mean[0] && flux[0] > 1 && flux[2] > mean[2] && flux[2] > 1|| 
-           flux[1] > mean[1] && flux[1] > 1 && flux[2] > mean[2] && flux[2] > 1) {
+//      if ( flux[0] > mean[0] && flux[0] > 1 && flux[1] > mean[1] && flux[1] > 1||
+//           flux[0] > mean[0] && flux[0] > 1 && flux[2] > mean[2] && flux[2] > 1|| 
+//           flux[1] > mean[1] && flux[1] > 1 && flux[2] > mean[2] && flux[2] > 1) {
+        if ( (flux[0] > mean[0]  && flux[1] > mean[1]) ||
+             (flux[0] > mean[0] && flux[2] > mean[2])|| 
+             (flux[1] > mean[1] && flux[2] > mean[2])) {
             this.tone = true;
             this.hps.detectPitch();
             
@@ -85,7 +78,7 @@ public class OnSetDetection extends AbstractRenderCommand<IAudioRenderTarget> im
         Float[] flux = new Float[] {0f, 0f, 0f};
         for (int i = 0; i < 3; i++) {
             float value = spectrum[i] - last_spectrum[i];
-            flux[i] = (float) (value < 0 ? 0 : Math.round(value*100.0)/100.0);
+            flux[i] = (float) (value < 0 ? 0 : Math.round(value*10.0)/10.0);
         }
         return flux;
     }
@@ -103,13 +96,9 @@ public class OnSetDetection extends AbstractRenderCommand<IAudioRenderTarget> im
                 
         for(int i=0; i < 3; i++) {
             float value = mean[i] / (end - start);
-            mean[i] = (float) (Math.round(value*100.0)/100.0);
+            mean[i] = (float) (Math.round(value*10.0)/10.0);
             point(mean[i], colors[i]);
-            if(i == 0) {
-                mean[i] *= 1f;
-            } else {
-                mean[i] *= 2f;
-            }            
+            mean[i] *= 2f;          
         }
         return mean;
         
