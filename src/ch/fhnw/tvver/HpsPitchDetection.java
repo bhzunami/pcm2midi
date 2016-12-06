@@ -1,9 +1,7 @@
 package ch.fhnw.tvver;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import ch.fhnw.ether.audio.IAudioRenderTarget;
 import ch.fhnw.ether.audio.fx.FFT;
@@ -17,13 +15,11 @@ public class HpsPitchDetection extends AbstractRenderCommand<IAudioRenderTarget>
 
 	private FFT fft;
 	private int harmonics;
-	private Map<Integer, Long> pitchHistory;
 	private PitchDetectionResult lastResult;
 
 	public HpsPitchDetection(FFT fft, int harmonics) {
 		this.fft = fft;
 		this.harmonics = harmonics;
-		this.pitchHistory = new HashMap<>();
 	}
 
 	@Override
@@ -61,13 +57,8 @@ public class HpsPitchDetection extends AbstractRenderCommand<IAudioRenderTarget>
 		float fundamentalFreq = this.fft.idx2f(maxIndex);
 		int midiNote = this.calcMidiNote(fundamentalFreq);
 
-		long lastPlayed = this.pitchHistory.getOrDefault(midiNote, 0L);
-		this.pitchHistory.put(midiNote, System.currentTimeMillis());
-		long now = this.pitchHistory.get(midiNote);
-		
 		boolean isPitched = true;
-		isPitched &= fundamentalFreq > 55.0f;
-		isPitched &= now - lastPlayed > 100;
+		//isPitched &= fundamentalFreq > 55.0f;
 		isPitched &= amplitude > 100;
 		this.lastResult =  new PitchDetectionResult(fundamentalFreq, amplitude, midiNote, isPitched);
 
