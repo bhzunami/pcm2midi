@@ -10,9 +10,11 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 
 import ch.fhnw.ether.audio.AudioUtilities.Window;
 import ch.fhnw.ether.audio.IAudioRenderTarget;
+import ch.fhnw.ether.audio.fx.AudioGain;
 import ch.fhnw.ether.audio.fx.AutoGain;
 import ch.fhnw.ether.audio.fx.FFT;
 import ch.fhnw.ether.media.AbstractRenderCommand;
+import ch.fhnw.ether.media.Parameter;
 import ch.fhnw.ether.media.RenderCommandException;
 import ch.fhnw.ether.media.RenderProgram;
 import ch.fhnw.ether.ui.IPlotable;
