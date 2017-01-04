@@ -13,9 +13,14 @@ import ch.fhnw.ether.media.RenderCommandException;
  */
 public class HpsPitchDetection extends AbstractRenderCommand<IAudioRenderTarget> {
 
+	private final static int MAX_COLLECT_CYCLE = 2;
+	
 	private FFT fft;
 	private int harmonics;
 	private PitchDetectionResult lastResult;
+	
+	private int collectCycle;
+	private float[] collection;
 
 	public HpsPitchDetection(FFT fft, int harmonics) {
 		this.fft = fft;
@@ -24,10 +29,30 @@ public class HpsPitchDetection extends AbstractRenderCommand<IAudioRenderTarget>
 
 	@Override
 	protected void run(IAudioRenderTarget target) throws RenderCommandException {
+		if(this.collection == null){
+			return;
+		}
+		if(this.collectCycle < MAX_COLLECT_CYCLE){
+			this.collection = this.fft.power();
+			this.collectCycle++;
+		} else {
+			this.doHpsDetection(this.collection);
+			this.collection = null;
+		}
 	}
 
 	public void detectPitch() {
-		float[] spectrum = this.fft.power();
+		if(this.collection != null){
+			// already doing a pitch detection
+			return;
+		}
+		this.collectCycle = 0;
+		this.collection = new float[1024];
+	}
+	
+	private void doHpsDetection(float[] collection){
+		float[] spectrum = new float[collection.length];
+		System.arraycopy(collection, 0, spectrum, 0, collection.length);
 		List<List<Float>> downsamples = new ArrayList<>();
 		for (int index = 1; index <= this.harmonics; index++) {
 			downsamples.add(this.downsample(spectrum, index));
@@ -58,8 +83,9 @@ public class HpsPitchDetection extends AbstractRenderCommand<IAudioRenderTarget>
 		int midiNote = this.calcMidiNote(fundamentalFreq);
 
 		boolean isPitched = true;
-		//isPitched &= fundamentalFreq > 55.0f;
+		isPitched &= fundamentalFreq > 25.5f;
 		isPitched &= amplitude > 100;
+		isPitched &= midiNote < 128;
 		this.lastResult =  new PitchDetectionResult(fundamentalFreq, amplitude, midiNote, isPitched);
 
 		// Octave errors are common (detection is sometimes an octave too high).
@@ -73,6 +99,7 @@ public class HpsPitchDetection extends AbstractRenderCommand<IAudioRenderTarget>
 		// TODO Octave correction
 
 	}
+	
 
 	/**
 	 * decreases the sampling rate of x by keeping every nth sample starting

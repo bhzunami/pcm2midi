@@ -133,7 +133,8 @@ public final class PCM2MIDIShell {
 				});
 			}
 		};
-		new PlotWindow(program);
+		if(!(getFlag(Flags.MAX_SPEED)))
+			new PlotWindow(program);
 
 		audioOut = impl.getFlag(Flags.MAX_SPEED) ? new NullAudioTarget(1, 44100) : new JavaSoundTarget(pcmOut);
 		audioOut.useProgram(program);
@@ -215,7 +216,7 @@ public final class PCM2MIDIShell {
 		Class<AbstractPCM2MIDI> cls = (Class<AbstractPCM2MIDI>)Class.forName("ch.fhnw.tvver." + args[1]);
 		List<AbstractPCM2MIDI> pcm2midis = getInputs(src, cls);
 		if(pcm2midis.isEmpty()) {
-			System.out.println("No inputs foudn in '"+src+"'");
+			System.out.println("No inputs found in '"+src+"'");
 			System.exit(1);
 		}
 
