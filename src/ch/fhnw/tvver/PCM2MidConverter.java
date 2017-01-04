@@ -10,11 +10,9 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 
 import ch.fhnw.ether.audio.AudioUtilities.Window;
 import ch.fhnw.ether.audio.IAudioRenderTarget;
-import ch.fhnw.ether.audio.fx.AudioGain;
 import ch.fhnw.ether.audio.fx.AutoGain;
 import ch.fhnw.ether.audio.fx.FFT;
 import ch.fhnw.ether.media.AbstractRenderCommand;
-import ch.fhnw.ether.media.Parameter;
 import ch.fhnw.ether.media.RenderCommandException;
 import ch.fhnw.ether.media.RenderProgram;
 import ch.fhnw.ether.ui.IPlotable;
@@ -39,23 +37,19 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
 		// gets repeated multiple times before and after.
 		FFT fft = new FFT(A_SUB_CONTRA_OCTAVE_FREQ, Window.HANN);
 
-		HpsPitchDetection hps = new HpsPitchDetection(fft, HARMONICS);
-		OnSetDetection osd = new OnSetDetection(fft, hps);
+		OnSetDetection osd = new OnSetDetection(fft);
 
 		program.addLast(new AutoGain());
 		program.addLast(fft);
 		program.addLast(osd);
-		program.addLast(hps);
-		program.addLast(new Converter(hps));
+		program.addLast(new Converter());
 
 	}
 
 	private class Converter extends AbstractRenderCommand<IAudioRenderTarget> implements IPlotable {
 
-		private HpsPitchDetection hps;
 
-		public Converter(HpsPitchDetection hps) {
-			this.hps = hps;
+		public Converter() {
 		}
 
 		@Override
@@ -64,18 +58,6 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
 
 		@Override
 		protected void run(IAudioRenderTarget target) throws RenderCommandException {
-			PitchDetectionResult lastResult = this.hps.getLastResult();
-			if (lastResult != null && lastResult.isPitched()) {
-				PCM2MidConverter.this.noteOn(lastResult.getMidiNote(), 64);
-				if(this.getActualNote() == lastResult.getMidiNote()){
-					System.out.println(String.format("%7d%7d%20f%20f", this.getActualNote(), lastResult.getMidiNote(),
-							lastResult.getFreq(), lastResult.getAmplitude()));
-				} else {
-					System.err.println(String.format("%7d%7d%20f%20f", this.getActualNote(), lastResult.getMidiNote(),
-							lastResult.getFreq(), lastResult.getAmplitude()));
-				}
-			}
-			this.hps.clearResult();
 		}
 
 		private int getActualNote() {
