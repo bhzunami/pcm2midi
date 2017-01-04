@@ -56,18 +56,14 @@ public final class YinPitchDetection extends AbstractRenderCommand<IAudioRenderT
 		float[] difference = this.difference(this.audioBuffer);
 		float[] normalizedDifference = this.cumulativeMeanNormalizedDifference(difference);
 		int index = this.absoluteThreshold(normalizedDifference);
-		if (index >= 0) {
+		if (index >= 0) {	
 			float correctedIndex = this.parabolicInterpolation(normalizedDifference, index);
 			float freq = this.sampleRate / correctedIndex;
 			this.result.setFreq(freq);
-			this.result.setMidiNote(this.calcMidiNote(freq));
+			this.result.setMidiNote(MidiNoteUtils.getNearestMidiNote(freq));
 		} else {
 			this.result.setPitched(false);
 		}
-	}
-
-	private int calcMidiNote(float freq) {
-		return (int) Math.ceil(69 + 12 * (Math.log(freq / 440) / Math.log(2)));
 	}
 
 	private float[] difference(final float[] audioBuffer) {
