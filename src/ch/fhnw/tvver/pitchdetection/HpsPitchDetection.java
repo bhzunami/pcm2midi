@@ -11,7 +11,7 @@ import ch.fhnw.ether.media.RenderCommandException;
 /**
  * Pitch Detection with the Harmonic Product Spectrum Algorithm
  */
-public class HpsPitchDetection extends AbstractRenderCommand<IAudioRenderTarget> {
+public class HpsPitchDetection extends AbstractRenderCommand<IAudioRenderTarget> implements PitchDetection {
 
 	private final static int MAX_COLLECT_CYCLE = 2;
 	
@@ -41,6 +41,7 @@ public class HpsPitchDetection extends AbstractRenderCommand<IAudioRenderTarget>
 		}
 	}
 
+	@Override
 	public void detectPitch() {
 		if(this.collection != null){
 			// already doing a pitch detection
@@ -117,10 +118,12 @@ public class HpsPitchDetection extends AbstractRenderCommand<IAudioRenderTarget>
 		return (int) Math.ceil(69 + 12 * (Math.log(freq / 440) / Math.log(2)));
 	}
 
-	public PitchDetectionResult getLastResult() {
+	@Override
+	public PitchDetectionResult getResult() {
 		return this.lastResult;
 	}
 	
+	@Override
 	public void clearResult() {
 		this.lastResult = null;
 	}

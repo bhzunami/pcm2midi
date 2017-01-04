@@ -9,12 +9,14 @@ import ch.fhnw.ether.audio.fx.FFT;
 import ch.fhnw.ether.media.AbstractRenderCommand;
 import ch.fhnw.ether.media.RenderCommandException;
 import ch.fhnw.ether.ui.IPlotable;
+import ch.fhnw.tvver.pitchdetection.PitchDetection;
 import ch.fhnw.util.color.RGB;
 
 public class OnSetDetection extends AbstractRenderCommand<IAudioRenderTarget> implements IPlotable {
    
     public static final float[] bands = { 80, 4000, 4000, 10000, 10000, 16000 };
     private FFT fft;
+    private PitchDetection pitchDetection;
     
     private RGB[] colors = new RGB[] {RGB.GREEN, RGB.YELLOW, RGB.BLUE};
     
@@ -27,9 +29,10 @@ public class OnSetDetection extends AbstractRenderCommand<IAudioRenderTarget> im
     private float last_energy = 0f;
     int idx = 0;
     
-    public OnSetDetection(FFT fft) {
+    public OnSetDetection(FFT fft, PitchDetection pitchDetection) {
         fft.addLast(this);
         this.fft = fft;
+        this.pitchDetection = pitchDetection;
     }
 
     @Override
@@ -81,7 +84,7 @@ public class OnSetDetection extends AbstractRenderCommand<IAudioRenderTarget> im
             this.tone = true;
 //            System.out.println("Play tone");
 
-            
+            this.pitchDetection.detectPitch();
             this.bar(1, RGB.RED);
         } else {
             this.tone = false;

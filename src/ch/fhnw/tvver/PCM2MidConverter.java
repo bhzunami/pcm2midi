@@ -17,6 +17,9 @@ import ch.fhnw.ether.media.RenderCommandException;
 import ch.fhnw.ether.media.RenderProgram;
 import ch.fhnw.ether.ui.IPlotable;
 import ch.fhnw.tvver.onsetdetection.OnSetDetection;
+import ch.fhnw.tvver.pitchdetection.PitchDetection;
+import ch.fhnw.tvver.pitchdetection.PitchDetectionResult;
+import ch.fhnw.tvver.pitchdetection.YinPitchDetection;
 
 public class PCM2MidConverter extends AbstractPCM2MIDI {
 	// Attack herunter schrauben
@@ -38,19 +41,23 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
 		// gets repeated multiple times before and after.
 		FFT fft = new FFT(A_SUB_CONTRA_OCTAVE_FREQ, Window.HANN);
 
-		OnSetDetection osd = new OnSetDetection(fft);
+		YinPitchDetection ypd = new YinPitchDetection();
+		OnSetDetection osd = new OnSetDetection(fft, ypd);
 
 		program.addLast(new AutoGain());
 		program.addLast(fft);
 		program.addLast(osd);
-		program.addLast(new Converter());
+		program.addLast(ypd);
+		program.addLast(new Converter(ypd));
 
 	}
 
 	private class Converter extends AbstractRenderCommand<IAudioRenderTarget> implements IPlotable {
 
+		private PitchDetection pitchDetection;
 
-		public Converter() {
+		public Converter(PitchDetection pitchDetection) {
+			this.pitchDetection = pitchDetection;
 		}
 
 		@Override
@@ -59,6 +66,13 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
 
 		@Override
 		protected void run(IAudioRenderTarget target) throws RenderCommandException {
+			PitchDetectionResult result = this.pitchDetection.getResult();
+			if(result != null){
+				int midiNote = result.getMidiNote();
+				System.out.println(String.format("%5s %5s", midiNote, this.getActualNote()));
+				PCM2MidConverter.this.noteOn(midiNote, 16);
+				this.pitchDetection.clearResult();
+			}
 		}
 
 		private int getActualNote() {
