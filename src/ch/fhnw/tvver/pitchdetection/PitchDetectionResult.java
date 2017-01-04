@@ -1,4 +1,4 @@
-package ch.fhnw.tvver;
+package ch.fhnw.tvver.pitchdetection;
 
 public class PitchDetectionResult {
 	

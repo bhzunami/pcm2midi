@@ -1,4 +1,4 @@
-package ch.fhnw.tvver;
+package ch.fhnw.tvver.pitchdetection;
 
 import java.util.ArrayList;
 import java.util.List;

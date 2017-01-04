@@ -1,4 +1,4 @@
-package ch.fhnw.tvver;
+package ch.fhnw.tvver.onsetdetection;
 
 import java.util.ArrayList;
 import java.util.List;

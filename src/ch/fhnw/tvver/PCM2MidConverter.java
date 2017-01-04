@@ -16,6 +16,7 @@ import ch.fhnw.ether.media.AbstractRenderCommand;
 import ch.fhnw.ether.media.RenderCommandException;
 import ch.fhnw.ether.media.RenderProgram;
 import ch.fhnw.ether.ui.IPlotable;
+import ch.fhnw.tvver.onsetdetection.OnSetDetection;
 
 public class PCM2MidConverter extends AbstractPCM2MIDI {
 	// Attack herunter schrauben
