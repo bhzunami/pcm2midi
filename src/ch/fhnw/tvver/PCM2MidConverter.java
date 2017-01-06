@@ -17,6 +17,7 @@ import ch.fhnw.ether.media.RenderCommandException;
 import ch.fhnw.ether.media.RenderProgram;
 import ch.fhnw.ether.ui.IPlotable;
 import ch.fhnw.tvver.onsetdetection.OnSetDetection;
+import ch.fhnw.tvver.pitchdetection.MidiNote;
 import ch.fhnw.tvver.pitchdetection.PitchDetection;
 import ch.fhnw.tvver.pitchdetection.PitchDetectionResult;
 import ch.fhnw.tvver.pitchdetection.YinPitchDetection;
@@ -27,7 +28,6 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
 	// attack 0.015
 
 	private static final float A_SUB_CONTRA_OCTAVE_FREQ = 25.5f;
-	private static final int HARMONICS = 2;
 
 	public PCM2MidConverter(File track) throws UnsupportedAudioFileException, IOException, MidiUnavailableException,
 			InvalidMidiDataException, RenderCommandException {
@@ -42,6 +42,8 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
 		FFT fft = new FFT(A_SUB_CONTRA_OCTAVE_FREQ, Window.HANN);
 
 		YinPitchDetection ypd = new YinPitchDetection();
+		// HpsPitchDetection hpd = new HpsPitchDetection(fft);
+
 		OnSetDetection osd = new OnSetDetection(fft, ypd);
 
 		program.addLast(new AutoGain());
@@ -67,11 +69,11 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
 		@Override
 		protected void run(IAudioRenderTarget target) throws RenderCommandException {
 			PitchDetectionResult result = this.pitchDetection.getResult();
-			if(result != null){
-				int midiNote = result.getMidiNote();
-				float freq = result.getFreq();
-				System.out.println(String.format("%5s %5s %10f", this.getActualNote(), midiNote, freq));
-				PCM2MidConverter.this.noteOn(midiNote, 16);
+			if (result != null && result.isPitched()) {
+				MidiNote midiNote = result.getMidiNote();
+				System.out.println(
+						String.format("%5s %5s %10f", this.getActualNote(), midiNote.getId(), midiNote.getFrequency()));
+				PCM2MidConverter.this.noteOn(midiNote.getId(), 16);
 				this.pitchDetection.clearResult();
 			}
 		}

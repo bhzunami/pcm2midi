@@ -142,16 +142,16 @@ public enum MidiNote {
 	G11(127,12543.853951416f);
 
 	
-	private int midiNote;
+	private int id;
 	private float frequency;
 	
-	private MidiNote(int midiNote, float frequency){
-		this.midiNote = midiNote;
+	private MidiNote(int id, float frequency){
+		this.id = id;
 		this.frequency = frequency;
 	}
 	
-	public int getMidiNote(){
-		return this.midiNote;
+	public int getId(){
+		return this.id;
 	}
 	
 	public float getFrequency(){

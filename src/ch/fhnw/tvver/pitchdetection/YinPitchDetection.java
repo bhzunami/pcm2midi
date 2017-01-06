@@ -17,6 +17,7 @@ public final class YinPitchDetection extends AbstractRenderCommand<IAudioRenderT
 
 	private static final double THRESHOLD = 0.20;
 	private static final int AUDIO_BUFFER_SIZE = 2048;
+	
 	private float sampleRate;
 	private float[] audioBuffer;
 	private PitchDetectionResult result;
@@ -59,7 +60,6 @@ public final class YinPitchDetection extends AbstractRenderCommand<IAudioRenderT
 		if (index >= 0) {	
 			float correctedIndex = this.parabolicInterpolation(normalizedDifference, index);
 			float freq = this.sampleRate / correctedIndex;
-			this.result.setFreq(freq);
 			this.result.setMidiNote(MidiNoteUtils.getNearestMidiNote(freq));
 		} else {
 			this.result.setPitched(false);
