@@ -23,10 +23,6 @@ import ch.fhnw.tvver.pitchdetection.PitchDetectionResult;
 import ch.fhnw.tvver.pitchdetection.YinPitchDetection;
 
 public class PCM2MidConverter extends AbstractPCM2MIDI {
-	// Attack herunter schrauben
-	// suspend a decand 2 s
-	// attack 0.015
-
 	private static final float A_SUB_CONTRA_OCTAVE_FREQ = 25.5f;
 
 	public PCM2MidConverter(File track) throws UnsupportedAudioFileException, IOException, MidiUnavailableException,
@@ -42,8 +38,6 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
 		FFT fft = new FFT(A_SUB_CONTRA_OCTAVE_FREQ, Window.HANN);
 
 		YinPitchDetection ypd = new YinPitchDetection();
-		// HpsPitchDetection hpd = new HpsPitchDetection(fft);
-
 		OnSetDetection osd = new OnSetDetection(fft, ypd);
 
 		program.addLast(new AutoGain());
@@ -76,19 +70,6 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
 				PCM2MidConverter.this.noteOn(midiNote.getId(), 16);
 				this.pitchDetection.clearResult();
 			}
-		}
-
-		private int getActualNote() {
-			int velocity = 0;
-			int maxIndex = 0;
-			int[] velocities = PCM2MidConverter.this.getVelocities();
-			for (int index = 0; index < velocities.length; index++) {
-				if (velocities[index] > velocity) {
-					velocity = velocities[index];
-					maxIndex = index;
-				}
-			}
-			return maxIndex;
 		}
 
 	}

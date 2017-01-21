@@ -12,14 +12,22 @@ import ch.fhnw.ether.ui.IPlotable;
 import ch.fhnw.tvver.pitchdetection.PitchDetection;
 import ch.fhnw.util.color.RGB;
 
+
+/**
+ * This class does a on set detection.<br>
+ * <br>
+ * Sources:
+ * <ul>
+ * <li>http://www.badlogicgames.com/wordpress/?p=187</li>
+ * <li>http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.332.989&rep=rep1&type=pdf</li>
+ * </ul>
+ */
 public class OnSetDetection extends AbstractRenderCommand<IAudioRenderTarget> implements IPlotable {
    
     public static final float[] bands = { 80, 4000, 4000, 10000, 10000, 16000 };
     private FFT fft;
     private PitchDetection pitchDetection;
-    
-    private RGB[] colors = new RGB[] {RGB.GREEN, RGB.YELLOW, RGB.BLUE};
-    
+        
     public boolean tone = false;
     
     private List<Float[]> spectralFlux = new ArrayList<>();
@@ -39,10 +47,10 @@ public class OnSetDetection extends AbstractRenderCommand<IAudioRenderTarget> im
     protected void run(IAudioRenderTarget target) throws RenderCommandException {
         this.last_energy = this.energy;
         this.energy = AudioUtilities.energy(target.getFrame().samples);
-//        bar(energy, RGB.ORANGE);
        
         for(int i = 0; i < 7; i++) this.clear();
         
+        // Copy last spectrum to get a history for comparing
         System.arraycopy(this.spectrum, 0, this.last_spectrum, 0, this.spectrum.length);
         for(int i=0; i < bands.length/2; i++) {
             this.spectrum[i] = this.fft.power(bands[i*2], bands[i*2+1]);
@@ -53,48 +61,27 @@ public class OnSetDetection extends AbstractRenderCommand<IAudioRenderTarget> im
         
         // add to spectralFulx to calculate Treshhold
         this.spectralFlux.add(flux);
-        
-        // Durchschnittswert für die letzten 5 FFT
-        Float[] mean = this.calcualteTreshhold(Math.max(0, this.idx - 5), Math.min(this.spectralFlux.size() - 1, this.idx + 5));
-//        System.out.println("Current Flux: " +flux[0] +", " +flux[1] +", " +flux[2]);
-//        System.out.println("MEAN " +mean[0] +", " +mean[1] +", " +mean[2]);
-//        System.out.println("Energy " +energy);
-        
-        
-        
-        
-        if( (flux[1] == 0f && flux[2] == 0f && flux[0] - mean[0] < 40) ||
-                (flux[0] < 5f)){
-//            System.out.println("IGNORE SAMPLES");
-        } else {
-            
-//       
-//      if ( flux[0] > mean[0] && flux[0] > 1 && flux[1] > mean[1] && flux[1] > 1||
-//           flux[0] > mean[0] && flux[0] > 1 && flux[2] > mean[2] && flux[2] > 1|| 
-//           flux[1] > mean[1] && flux[1] > 1 && flux[2] > mean[2] && flux[2] > 1) {
-            
-            
-            
-            /**
-             * ||
-             (flux[0] >= mean[0] && flux[2] >= mean[2] && energyRising())|| 
-             (flux[1] >= mean[1] && flux[2] >= mean[2] && energyRising())) 
-             */
-        if ( flux[0] > mean[0]  && flux[1] >= mean[1] && flux[2] >= mean[2] && this.energyRising()) {
-            this.tone = true;
-//            System.out.println("Play tone");
 
-            this.pitchDetection.detectPitch();
-            this.bar(1, RGB.RED);
+        // Durchschnittswert für die letzten 5 FFT
+        Float[] mean = this.calcualteTreshhold(Math.max(0, this.idx - 5),
+                Math.min(this.spectralFlux.size() - 1, this.idx + 5));
+
+        if ((flux[1] == 0f && flux[2] == 0f && flux[0] - mean[0] < 40) || (flux[0] < 5f)) {
+            // TODO: Check if ignore is the best part
+            // System.out.println("IGNORE SAMPLES");
         } else {
-            this.tone = false;
+            if (flux[0] > mean[0] && flux[1] >= mean[1] && flux[2] >= mean[2] && this.energyRising()) {
+                this.tone = true;
+                this.pitchDetection.detectPitch();
+                this.bar(1, RGB.RED);
+            } else {
+                this.tone = false;
+            }
         }
-        }
-      
+
         this.idx++;
         this.clear();
-//        System.out.println("----------------");
-//        System.out.println();
+
     }
 
     private Float[] calculateFlux() {
@@ -120,7 +107,6 @@ public class OnSetDetection extends AbstractRenderCommand<IAudioRenderTarget> im
         for(int i=0; i < 3; i++) {
             float value = mean[i] / (end - start);
             mean[i] = (float) (Math.round(value*10.0)/10.0);
-            //point(mean[i], colors[i]);
             mean[i] *= 2f;          
         }
         return mean;
@@ -128,9 +114,7 @@ public class OnSetDetection extends AbstractRenderCommand<IAudioRenderTarget> im
     }
     
     private boolean energyRising() {
-        
-        return this.last_energy + 0.08 < this.energy;
-        
+        return this.last_energy + 0.08 < this.energy; 
     }
 
 }
