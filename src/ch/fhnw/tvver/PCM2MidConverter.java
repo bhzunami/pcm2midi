@@ -31,7 +31,7 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
 
 	public PCM2MidConverter(File track) throws UnsupportedAudioFileException, IOException, MidiUnavailableException,
 			InvalidMidiDataException, RenderCommandException {
-		super(track, EnumSet.of(Flags.REPORT, Flags.WAVE));
+		super(track, EnumSet.of(Flags.REPORT, Flags.MAX_SPEED));
 	}
 
 	@Override
