@@ -15,7 +15,7 @@ import ch.fhnw.ether.media.RenderCommandException;
 import ch.fhnw.ether.media.RenderProgram;
 
 public abstract class AbstractPCM2MIDI {
-	enum Flags {SYNTH, WAVE, REPORT, DEBUG, MAX_SPEED}
+	enum Flags {SYNTH, WAVE, REPORT, DEBUG, MAX_SPEED, DUMP_MIDI}
 
 	private final PCM2MIDIShell p2ms;
 	private       Throwable     exception;

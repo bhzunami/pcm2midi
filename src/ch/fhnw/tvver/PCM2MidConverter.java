@@ -71,8 +71,8 @@ public class PCM2MidConverter extends AbstractPCM2MIDI {
 			PitchDetectionResult result = this.pitchDetection.getResult();
 			if (result != null && result.isPitched()) {
 				MidiNote midiNote = result.getMidiNote();
-				System.out.println(
-						String.format("%5s %5s %10f", this.getActualNote(), midiNote.getId(), midiNote.getFrequency()));
+//				System.out.println(
+//						String.format("%5s %5s %10f", this.getActualNote(), midiNote.getId(), midiNote.getFrequency()));
 				PCM2MidConverter.this.noteOn(midiNote.getId(), 16);
 				this.pitchDetection.clearResult();
 			}

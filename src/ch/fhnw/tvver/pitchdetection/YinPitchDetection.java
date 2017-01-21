@@ -15,8 +15,8 @@ import ch.fhnw.ether.media.RenderCommandException;
  */
 public final class YinPitchDetection extends AbstractRenderCommand<IAudioRenderTarget> implements PitchDetection {
 
-	private static final double THRESHOLD = 0.2;
-	private static final int AUDIO_BUFFER_SIZE = 2048;
+	private static final double THRESHOLD = 0.8;
+	private static final int AUDIO_BUFFER_SIZE = 1400;
 
 	private float sampleRate;
 	private float[] audioBuffer;

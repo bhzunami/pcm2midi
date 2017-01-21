@@ -7,10 +7,11 @@ import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
@@ -33,6 +34,8 @@ import ch.fhnw.ether.audio.NullAudioTarget;
 import ch.fhnw.ether.audio.URLAudioSource;
 import ch.fhnw.ether.media.RenderCommandException;
 import ch.fhnw.ether.media.RenderProgram;
+import ch.fhnw.ether.midi.MidiToString;
+import ch.fhnw.ether.midi.URLMidiSource;
 import ch.fhnw.ether.platform.Platform;
 import ch.fhnw.ether.ui.ParameterWindow;
 import ch.fhnw.ether.ui.ParameterWindow.Flag;
@@ -60,6 +63,7 @@ public final class PCM2MIDIShell {
 	private       IAudioRenderTarget    audioOut;
 	private final File                  track;
 	boolean[]                           detected = new boolean[128];
+	private Set<File>                   midiDump = new HashSet<>();
 	final MidiKeyTracker                tracker  = new MidiKeyTracker() {
 		@Override
 		protected void setVelocity(int key, int velocity) {
@@ -67,29 +71,27 @@ public final class PCM2MIDIShell {
 			if(velocity == 0) detected[key] = false;
 		};
 	};
-	private TreeSet<MidiEvent>          midiRef        = new TreeSet<MidiEvent>(new Comparator<MidiEvent>() {
-		@Override
-		public int compare(MidiEvent o1, MidiEvent o2) {
-			int   result  = (int) (o1.getTick() - o2.getTick());
-			return result == 0 ? o1.getMessage().getMessage()[1] - o2.getMessage().getMessage()[1] : result;
-		}
-	});
+	private TreeSet<MidiEvent>          midiRef        = new TreeSet<MidiEvent>(URLMidiSource.MIDI_EVWNT_CMP);
 
 	public PCM2MIDIShell(File track, EnumSet<Flags> flags) throws MalformedURLException, IOException, InvalidMidiDataException {		
 		this.track = track;
 		this.flags = flags;
 
 		URLAudioSource src = new URLAudioSource(track.toURI().toURL(), 1) {
-			long lastTime;
+			long lasttime;
 			@Override
 			protected void sendMidiMsg(Receiver recv, MidiMessage msg, long time) {
+				if(time - lastTime() < 0)
+					midiDump.add(track);
+				if(flags.contains(Flags.DUMP_MIDI) && !(midiDump.contains(track)))
+					System.out.println(MidiToString.toString(msg));
 				if(msg instanceof ShortMessage && ((ShortMessage)msg).getCommand() == ShortMessage.NOTE_ON) {
 					ShortMessage sm = (ShortMessage)msg;
 					if(sm.getData2() == 0)
 						super.sendMidiMsg(recv, msg, time);
-					else if(time != lastTime && (time - lastTime > 1000000 || time - lastTime < 0)) {
+					else if(time != lastTime() && (time - lastTime() >= 1000000 || time - lastTime() < 0)) {
 						try {
-							lastTime = time;
+							lastTime(time);
 							msg = new ShortMessage(sm.getStatus(), sm.getData1(), 64);
 							super.sendMidiMsg(recv, msg, time);
 						} catch (Throwable t) {}
@@ -97,6 +99,9 @@ public final class PCM2MIDIShell {
 				} else
 					super.sendMidiMsg(recv, msg, time);
 			}
+
+			private long lastTime()          {return lasttime - Long.MAX_VALUE / 2;}
+			private void lastTime(long time) {lasttime = time + Long.MAX_VALUE / 2;}			
 		};
 		src.getMidiEvents(midiRef);
 		for(MidiEvent e : midiRef) {

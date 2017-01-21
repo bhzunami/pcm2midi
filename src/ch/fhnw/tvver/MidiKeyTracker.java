@@ -17,7 +17,7 @@ import ch.fhnw.util.color.RGB;
 
 public class MidiKeyTracker extends AbstractRenderCommand<IAudioRenderTarget> implements IPlotable {
 	private final int[] velocities = new int[128];
-	private final List<List<MidiEvent>> midiRef = new ArrayList<>();
+	private final List<List<MidiEvent>> midiRef = new ArrayList<>(1024*104);
 	private       int                   msTime;
 	private       SortedSet<MidiEvent>  refMidi = new TreeSet<>();
 	
